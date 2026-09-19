@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { width: 900px; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(180deg, #f4f7fb 0%, #e8eef7 100%); color: #1f2229; padding: 48px 56px; }
+  .head { display: flex; align-items: center; gap: 18px; margin-bottom: 8px; }
+  .logo { width: 64px; height: 64px; border-radius: 16px; background: linear-gradient(135deg, #2e60d6, #4a90e2);
+    display: flex; align-items: center; justify-content: center; font-size: 34px; color: #fff; }
+  h1 { font-size: 30px; } .sub { color: #6a7284; font-size: 14px; margin-top: 4px; }
+  .badges { display: flex; gap: 10px; margin: 18px 0 30px; }
+  .badge { font-size: 12.5px; font-weight: 600; color: #2e60d6; background: rgba(46,96,214,.08);
+    border: 1px solid rgba(46,96,214,.18); border-radius: 999px; padding: 5px 14px; }
+  .layer { background: #fff; border: 1px solid #e3e9f2; border-radius: 18px; padding: 22px 24px; margin-bottom: 0; box-shadow: 0 4px 16px rgba(30,40,70,.05); }
+  .layer h3 { font-size: 17px; margin-bottom: 4px; display: flex; align-items: center; gap: 10px; }
+  .layer h3 .n { width: 26px; height: 26px; border-radius: 8px; background: #2e60d6; color: #fff; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; }
+  .layer p.desc { font-size: 13px; color: #6a7284; margin-bottom: 14px; }
+  .cells { display: flex; flex-wrap: wrap; gap: 10px; }
+  .cell { flex: 1 1 30%; background: #f6f9fd; border: 1px solid #e3e9f2; border-radius: 12px; padding: 12px 14px; min-width: 200px; }
+  .cell b { font-size: 13.5px; display: block; margin-bottom: 3px; color: #24304a; }
+  .cell span { font-size: 12px; color: #7a8296; line-height: 1.55; display: block; }
+  .cell code { font-family: Consolas, monospace; font-size: 11.5px; color: #2e60d6; background: rgba(46,96,214,.07); border-radius: 5px; padding: 1px 5px; }
+  .arrow { text-align: center; color: #9fb4d8; font-size: 22px; line-height: 1; padding: 12px 0; }
+  .flow { display: flex; gap: 14px; margin-top: 30px; }
+  .fcard { flex: 1; background: #24304a; color: #dfe6f5; border-radius: 16px; padding: 18px; }
+  .fcard h4 { color: #fff; font-size: 14.5px; margin-bottom: 10px; }
+  .fcard li { list-style: none; font-size: 12px; line-height: 1.9; color: #aeb9d6; }
+  .fcard li::before { content: "· "; color: #5b8fd9; }
+  .foot { margin-top: 26px; text-align: center; font-size: 12px; color: #8a94aa; }
+</style>
+</head>
+<body>
+  <div class="head">
+    <div class="logo">✈</div>
+    <div>
+      <h1>项目领航员 · ProjectPilot</h1>
+      <div class="sub">uTools 项目管理智能插件 — 脚本 / Git / 备忘 / 自动任务 / AI 提交助手</div>
+    </div>
+  </div>
+  <div class="badges">
+    <span class="badge">uTools Plugin</span><span class="badge">零依赖 Vanilla JS</span>
+    <span class="badge">OpenAI 兼容 AI</span><span class="badge">iOS 磨砂玻璃 UI</span><span class="badge">Windows 优先</span>
+  </div>
+
+  <div class="layer">
+    <h3><span class="n">1</span>入口层 plugin.json + index.html</h3>
+    <p class="desc">uTools 关键字「项目管理 / pm / pilot」唤起；单帧窗口 (980×640)，preload 注入 Node 能力</p>
+    <div class="cells">
+      <div class="cell"><b>features 指令</b><span><code>项目管理</code> <code>pm</code> <code>pilot</code>，支持文件拖入直接添加项目</span></div>
+      <div class="cell"><b>singleFrame</b><span>保持会话状态，仪表盘 ⇄ 详情视图前端路由切换</span></div>
+      <div class="cell"><b>主题系统</b><span>CSS 变量双主题，跟随 uTools 深浅色，可手动切换</span></div>
+    </div>
+  </div>
+  <div class="arrow">▼</div>
+
+  <div class="layer">
+    <h3><span class="n">2</span>引擎层 preload.js（Node 桥接）</h3>
+    <p class="desc">全部系统能力集中暴露为 <code>window.pilot</code>，渲染层零 Node 依赖</p>
+    <div class="cells">
+      <div class="cell"><b>Git 引擎</b><span><code>status --porcelain=v2</code> 解析未提交/暂存/未跟踪，<code>log</code> <code>diff</code> <code>add/commit/push/pull</code>，无远端仓库降级可用</span></div>
+      <div class="cell"><b>进程引擎</b><span><code>cmd /c</code> 一次性任务 + 常驻服务进程句柄，<code>taskkill /T /F</code> 进程树强杀，输出环形缓冲</span></div>
+      <div class="cell"><b>文件引擎</b><span>目录浏览（忽略 <code>node_modules</code> 等）、文本预览/编辑（512KB 上限 + 二进制嗅探）、重命名/删除</span></div>
+      <div class="cell"><b>存储</b><span><code>utools.db</code> 版本化读写（<code>_rev</code> 冲突处理），项目/设置分离存储</span></div>
+      <div class="cell"><b>AI 客户端</b><span>OpenAI 兼容 <code>/chat/completions</code>，https/http 双栈，120s 超时，错误体透传</span></div>
+      <div class="cell"><b>系统集成</b><span>打开文件夹/终端（<code>wt.exe</code> 优先）、系统通知、复制文本</span></div>
+    </div>
+  </div>
+  <div class="arrow">▼</div>
+
+  <div class="layer">
+    <h3><span class="n">3</span>视图层（Vanilla JS 组件化）</h3>
+    <p class="desc">无框架、无构建链；store → ui → views 单向数据流</p>
+    <div class="cells">
+      <div class="cell"><b>仪表盘</b><span>项目卡片栅格：脚本一键启动、Git 未提交徽章（后台并发刷新）、标签筛选、搜索、排序</span></div>
+      <div class="cell"><b>详情六 Tab</b><span>概览 / 脚本（含输出控制台抽屉）/ Git / 备忘（自动保存）/ 任务 / 文件</span></div>
+      <div class="cell"><b>Git 工作台</b><span>变更（暂存/丢弃/diff 着色）· 提交树（type 着色时间线）· AI 分析三区</span></div>
+      <div class="cell"><b>自动任务</b><span>固定间隔 / 每天定时 / 打开时触发，运行日志留痕 + 失败系统通知</span></div>
+      <div class="cell"><b>降级策略</b><span><code>?flat</code> 低性能模式：去除 backdrop-filter 与大半径模糊</span></div>
+      <div class="cell"><b>Mock 预览</b><span><code>mock/utools-mock.js</code> 浏览器内独立运行整套 UI，uTools 内自动失效</span></div>
+    </div>
+  </div>
+  <div class="arrow">▼</div>
+
+  <div class="layer">
+    <h3><span class="n">4</span>AI 能力（自定义提示词）</h3>
+    <p class="desc">任意 OpenAI 兼容服务：DeepSeek / Moonshot / 通义 / OpenAI / OpenRouter</p>
+    <div class="cells">
+      <div class="cell"><b>✦ 提交信息生成</b><span>暂存区 diff（14k 字符截断）+ 自定义 System 提示词 → Conventional Commits 风格提交语</span></div>
+      <div class="cell"><b>✦ 提交记录分析</b><span>最近 20/50/100 条提交作为上下文；内置 变更总结 / 周报生成 / 风险审查，模式可增删改</span></div>
+      <div class="cell"><b>提示词管理</b><span>提交语提示词与每个分析模式的 prompt 均可在设置页自定义并持久化</span></div>
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="fcard"><h4>数据流</h4><li>uTools 唤起 → Store 加载 db</li><li>仪表盘 → 并发 git status → 卡片徽章</li><li>操作 → preload 执行 → 视图重渲染</li><li>变更 → dbPut 持久化</li></div>
+    <div class="fcard"><h4>安全边界</h4><li>删除/丢弃均二次确认</li><li>文件编辑限制 512KB 文本</li><li>API Key 仅存本地 db</li><li>diff/AI 输入超长截断</li></div>
+    <div class="fcard"><h4>技术栈</h4><li>Chromium Renderer (uTools)</li><li>Node.js child_process</li><li>原生 CSS backdrop-filter</li><li>零 npm 依赖 / 零构建</li></div>
+  </div>
+
+  <div class="foot">ProjectPilot v1.0.0 · 用最少的依赖做最顺手的开发工作台</div>
+</body>
+</html>
