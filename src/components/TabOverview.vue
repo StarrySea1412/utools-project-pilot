@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
-import { store, startScript } from '../store.js';
+import { store, startScript, stopScript, projectPorts, watchProc, checkGit } from '../store.js';
 import { toast, timeAgo, commitType } from '../ui.js';
 
 const props = defineProps({ project: { type: Object, required: true } });
@@ -17,6 +17,21 @@ onMounted(async () => {
 });
 
 const tasksOn = computed(() => (props.project.tasks || []).filter((t) => t.enabled).length);
+
+// ---- 概览内嵌服务控制台（Dockge 风：一行服务 + 行内日志） ----
+const runningScripts = computed(() => props.project.scripts.filter((s) => s.persistent));
+function isRunning(s) { return !!store.procHandles[s.id]?.running; }
+async function toggle(s) {
+  if (isRunning(s)) { await stopScript(s); toast(`已停止「${s.name}」`, 'ok'); }
+  else { startScript(props.project, s); toast(`已启动「${s.name}」`, 'ok'); }
+}
+const logOf = (s) => {
+  const h = store.procHandles[s.id];
+  return h ? (store.procLogs[h.id] || '').slice(-600) : '';
+};
+const portsOf = computed(() => projectPorts(props.project));
+function openPort(p) { window.pilot.openInBrowser(`http://localhost:${p.port}`); }
+const isHttp = (port) => [80, 443, 3000, 3001, 4000, 5000, 5173, 5174, 7001, 8000, 8001, 8008, 8080, 8081, 8090, 8888, 9000, 9528, 4200].includes(port);
 
 function runScript(script) {
   startScript(props.project, script);
@@ -43,6 +58,27 @@ function toGit() { store.detailTab = 'git'; }
         <button class="btn btn-ghost" @click="openTerminal(project.path)">⌨ 终端</button>
         <button class="btn btn-ghost" @click="toGit">⑂ 查看 Git</button>
       </div>
+    </section>
+
+    <section v-if="runningScripts.length" class="glass panel svc-panel">
+      <h4 class="panel-title">⚡ 服务
+        <span class="panel-en">SERVICES</span>
+        <span v-if="portsOf.length" class="mini-tag svc mono" title="点击打开">{{ portsOf.map((p) => ':' + p.port).join(' ') }}</span>
+      </h4>
+      <div class="svc-rows">
+        <div v-for="s in runningScripts" :key="s.id" class="svc-row" :class="{ on: isRunning(s) }">
+          <div class="svc-head">
+            <span class="svc-led" :class="isRunning(s) ? 'on' : ''"></span>
+            <span class="svc-name">{{ s.name }}</span>
+            <span class="mono svc-cmd" :title="s.cmd">{{ s.cmd }}</span>
+            <span class="spacer"></span>
+            <span v-if="isRunning(s)" class="mini-tag svc">运行中</span>
+            <button class="btn sm" :class="isRunning(s) ? 'btn-danger' : 'btn-primary'" @click="toggle(s)">{{ isRunning(s) ? '■ 停止' : '▶ 启动' }}</button>
+          </div>
+          <pre v-if="isRunning(s) && logOf(s)" class="svc-log">{{ logOf(s) }}</pre>
+        </div>
+      </div>
+      <p class="hint">端口来自本机 netstat 实时关联。</p>
     </section>
 
     <section class="glass panel">

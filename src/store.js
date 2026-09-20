@@ -140,8 +140,9 @@ export function startScript(proj, script) {
 export async function stopScript(script) {
   const h = store.procHandles[script.id];
   if (!h) return;
-  await window.pilot.stopProc(h.id);
-  h.running = false;
+  h.running = false; // 先置：按钮立即回弹，避免 10s 轮询期间 UI 卡在「停止中」
+  try { await window.pilot.stopProc(h.id); } catch (e) { /* 后端已死无所谓 */ }
+  if (store.consoleOpen === script.id) store.consoleOpen = null;
 }
 
 // ---------- 自动任务 ----------
