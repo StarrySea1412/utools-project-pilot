@@ -143,6 +143,8 @@ index 3a2f1bc..8d91e2f 100644
       async diffFile(_path, file, staged) { return file.untracked ? '+++ 新文件: ' + file.path + '\n+# 新增内容示例' : fakeDiff; },
       async log(_path, n = 60) { return fakeLog.slice(0, n); },
       async branches(path) { return [{ current: true, name: fakeStatuses[projById(path).id]?.branch || 'main', upstream: 'origin/main' }, { current: false, name: 'develop', upstream: '' }]; },
+      async commitBranches() { return { '920132ab': ['main'], 'e84517af': ['main', 'feature/perf'], '93aa2677': ['v1.7.5'] }; },
+      async checkout() {},
       async stage() {}, async unstage() {}, async discard() {}, async discardUntracked() {},
       async commit(_path, msg) { fakeLog.unshift({ hash: Math.random().toString(16).slice(2), short: Math.random().toString(16).slice(2, 9), author: 'you', date: new Date().toISOString(), subject: msg.split('\n')[0], body: '' }); return Math.random().toString(16).slice(2, 9); },
       async push() {}, async pull() {}, async fetch() {}, async hasRemote() { return true; },

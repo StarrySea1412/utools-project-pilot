@@ -401,6 +401,21 @@ if (typeof window !== 'undefined') {
       diffFile: gitDiffFile,
       log: gitLog,
       branches: gitBranches,
+      // 提交行引用标签（分支/tag，git graph 风）：hash -> [label…]
+      async commitBranches(cwd, limit = 200) {
+        const sep = '\u0001', fld = '\u0002';
+        const out = await git(cwd, ['log', `--pretty=format:%H${fld}%D${sep}`, '-n', String(limit)]);
+        const map = {};
+        for (const row of out.split(sep).filter((r) => r.trim())) {
+          const [hash, refs] = row.split(fld);
+          const labels = String(refs || '').split(',').map((s) => s.trim()).filter(Boolean)
+            .map((r) => r.replace(/^HEAD -> /, '').replace(/^tag: /, ''))
+            .map((r) => (r.startsWith('origin/') ? 'Ω ' + r.slice(7) : r));
+          if (labels.length) map[(hash || '').trim()] = [...new Set(labels)];
+        }
+        return map;
+      },
+      checkout: async (cwd, ref) => { await git(cwd, ['checkout', ref]); return true; },
       stage: (cwd, files) => git(cwd, ['add', '--', ...files]),
       unstage: (cwd, files) => git(cwd, ['reset', 'HEAD', '--', ...files]),
       discard: (cwd, files) => git(cwd, ['checkout', '--', ...files]),

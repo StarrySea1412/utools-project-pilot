@@ -730,3 +730,19 @@ body {
 .svc-name { font-weight: 700; font-size: 12.5px; flex-shrink: 0; }
 .svc-cmd { font-size: 11px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
 .svc-log { margin: 8px 0 0; padding: 7px 9px; border-radius: 7px; background: var(--code-bg); font-family: var(--mono); font-size: 10.5px; line-height: 1.5; max-height: 108px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; color: var(--text-2); }
+
+/* GitHistory：git graph 风行引用标签 + 右键菜单 */
+.ref-tags { display: inline-flex; gap: 4px; flex-shrink: 0; max-width: 200px; overflow: hidden; }
+.ref-tag { font-size: 9.5px; font-weight: 700; font-family: var(--mono); padding: 1.5px 7px; border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); white-space: nowrap; }
+.ref-tag.head { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+.ref-tag.tag { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+.c-hash { cursor: pointer; border-radius: 4px; padding: 0 3px; }
+.c-hash:hover { background: var(--hover); color: var(--accent); }
+.ctx-menu { position: fixed; z-index: 300; min-width: 210px; border-radius: 10px; padding: 5px;
+  display: flex; flex-direction: column; gap: 1px; box-shadow: 0 8px 28px rgba(0,0,0,.22); }
+.ctx-menu .ctx-title { font-size: 10.5px; color: var(--text-3); padding: 5px 8px 7px; border-bottom: 1px solid var(--stroke-soft); margin-bottom: 4px; }
+.ctx-menu button { all: unset; cursor: pointer; font-size: 12px; color: var(--text-1, var(--text)); padding: 6px 9px; border-radius: 7px; }
+.ctx-menu button:hover { background: var(--hover); }
+.ctx-menu button:first-of-type { color: var(--accent); font-weight: 600; }

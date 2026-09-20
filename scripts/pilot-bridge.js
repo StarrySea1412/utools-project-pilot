@@ -69,6 +69,8 @@
       pull: (cwd) => post('/api/git/pull', { cwd }),
       fetch: (cwd) => post('/api/git/fetch', { cwd }),
       hasRemote: (cwd) => post('/api/git/hasRemote', { cwd }),
+      commitBranches: (cwd, limit) => post('/api/git/commitBranches', { cwd, limit }),
+      checkout: (cwd, ref) => post('/api/git/checkout', { cwd, ref }),
       commitFileNames: (cwd, hash) => post('/api/git/commitFileNames', { cwd, hash }),
     },
 

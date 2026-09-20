@@ -119,6 +119,24 @@ async function gitBranches(cwd) {
     return { current: head.trim() === '*', name, upstream: upstream || '' };
   });
 }
+// 每个提交行的分支/tag 标签（git graph 风）：用 %D 引用串解析，去重
+async function gitCommitBranches(cwd, limit = 200) {
+  const sep = '\u001f', fld = '\u0001';
+  const out = await git(cwd, ['log', `--pretty=format:%H${fld}%D${sep}`, '-n', String(limit)]);
+  const map = {};
+  for (const row of out.split(sep).filter((r) => r.trim())) {
+    const [hash, refs] = row.split(fld);
+    const labels = String(refs || '').split(',').map((s) => s.trim()).filter(Boolean)
+      .map((r) => r.replace(/^HEAD -> /, '').replace(/^tag: /, ''))
+      .map((r) => (r.startsWith('origin/') ? 'Ω ' + r.slice(7) : r));
+    if (labels.length) map[(hash || '').trim()] = [...new Set(labels)];
+  }
+  return map;
+}
+async function gitCheckout(cwd, ref) {
+  await git(cwd, ['checkout', ref]);
+  return true;
+}
 
 // ---------- 进程/脚本 ----------
 const procs = new Map();
@@ -399,6 +417,8 @@ const apiHandlers = {
 
 const gitOps = {
   status: (b) => gitStatus(b.cwd),
+  commitBranches: (b) => gitCommitBranches(b.cwd, b.limit),
+  checkout: (b) => gitCheckout(b.cwd, b.ref),
   diffFile: (b) => gitDiffFile(b.cwd, b.file, b.staged),
   log: (b) => gitLog(b.cwd, b.n),
   branches: (b) => gitBranches(b.cwd),
