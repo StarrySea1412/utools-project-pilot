@@ -88,7 +88,10 @@ function runFromCard(proj, script) {
   <header class="topbar glass-strong">
     <div class="brand">
       <div class="logo-mini">✈</div>
-      <h1>项目领航员</h1><span class="chip-pm">PM</span>
+      <div class="brand-txt">
+        <div class="brand-line"><h1>项目领航员</h1><span class="chip-pm">PM</span></div>
+        <span class="brand-en">PROJECT PILOT · NAV CONSOLE</span>
+      </div>
     </div>
     <div class="top-actions">
       <button class="icon-btn" title="切换主题" @click="toggleTheme">◐</button>
