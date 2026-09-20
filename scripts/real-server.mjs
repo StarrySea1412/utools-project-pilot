@@ -316,6 +316,56 @@ async function seedProjects(db) {
   };
 }
 
+// ---------- 项目身份识别：logo 图标 + 技术栈 ----------
+const ICON_CANDIDATES = ['logo.png', 'logo.svg', 'logo.jpg', 'logo.jpeg', 'icon.png', 'icon.svg', 'favicon.ico', 'favicon.png', 'public/favicon.ico', 'public/favicon.png', 'public/logo.png', 'public/logo.svg', 'public/icon.png', 'src/assets/logo.png', 'src/assets/logo.svg', 'assets/logo.png', 'assets/logo.svg', 'assets/icon.png', 'static/logo.png', 'docs/logo.png', 'static/favicon.ico', 'src-tauri/icons/icon.png', 'src-tauri/icons/32x32.png', 'resources/icon.png'];
+const identCache = new Map(); // path -> {at, result}
+async function identify(base) {
+  const hit = identCache.get(base);
+  if (hit && Date.now() - hit.at < 600000) return hit.result;
+  let icon = null, framework = '';
+  for (const rel of ICON_CANDIDATES) {
+    const full = path.join(base, rel);
+    try {
+      const st = await fsp.stat(full);
+      if (!st.isFile() || st.size < 64 || st.size > 512 * 1024) continue;
+      const buf = await fsp.readFile(full);
+      if (buf.includes(0) === false && !/\.svg$/.test(rel)) continue; // 纯文本当不了二进制图标
+      const ext = path.extname(full).toLowerCase();
+      const mime = ext === '.svg' ? 'image/svg+xml' : ext === '.ico' ? 'image/x-icon' : ext === '.png' ? 'image/png' : 'image/jpeg';
+      icon = `data:${mime};base64,${buf.toString('base64')}`;
+      break;
+    } catch (e) { /* 候选不存在，继续 */ }
+  }
+  const read = async (f) => fsp.readFile(path.join(base, f), 'utf8').catch(() => null);
+  const deps = {};
+  try {
+    const pkg = JSON.parse(await read('package.json') || '{}');
+    Object.assign(deps, pkg.dependencies || {}, pkg.devDependencies || {});
+  } catch (e) {}
+  const has = (k) => Object.keys(deps).some((d) => d === k || d.startsWith('@' + k + '/'));
+  if (has('next')) framework = 'Next';
+  else if (has('nuxt')) framework = 'Nuxt';
+  else if (has('vite')) framework = 'Vite';
+  else if (has('vue')) framework = 'Vue';
+  else if (has('react')) framework = 'React';
+  else if (has('svelte')) framework = 'Svelte';
+  else if (has('electron')) framework = 'Electron';
+  else if (has('express')) framework = 'Express';
+  if (!framework) {
+    const py = (await read('pyproject.toml')) || (await read('requirements.txt')) || '';
+    if (/django/i.test(py)) framework = 'Django';
+    else if (/fastapi/i.test(py)) framework = 'FastAPI';
+    else if (/flask/i.test(py)) framework = 'Flask';
+    else if (await fsp.stat(path.join(base, 'go.mod')).then(() => true, () => false)) framework = 'Go';
+    else if (await fsp.stat(path.join(base, 'Cargo.toml')).then(() => true, () => false)) framework = 'Rust';
+    else if (await fsp.stat(path.join(base, 'pom.xml')).then(() => true, () => false)) framework = 'Java';
+    else if (await fsp.stat(path.join(base, 'build.gradle')).then(() => true, () => false)) framework = 'Java';
+  }
+  const result = { icon, framework };
+  identCache.set(base, { at: Date.now(), result });
+  return result;
+}
+
 // ---------- HTTP 基础 ----------
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 function sendJson(res, code, obj) {
@@ -441,6 +491,7 @@ const server = http.createServer(async (req, res) => {
         if (!fn) return sendJson(res, 404, { message: '未知 fs 操作' });
         return sendJson(res, 200, await fn(body.args));
       }
+      if (p === '/api/ident' && req.method === 'POST') return sendJson(res, 200, await identify(body.args[0]));
       return sendJson(res, 404, { message: `未实现的接口: ${key}` });
     }
     // ----- 桥接脚本 -----

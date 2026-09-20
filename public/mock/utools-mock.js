@@ -189,6 +189,14 @@ index 3a2f1bc..8d91e2f 100644
         ];
       },
     },
+    // ---------- 项目身份识别（mock：无图标，按项目给技术栈演示） ----------
+    async identify(p) {
+      const fw = { 'axonhub': 'Electron', 'utools-project-pilot': 'Vue', 'ai-learning-platform': 'Django', 'smart-gallery': 'React', 'latex-notes': '' };
+      const name = (p || '').split('/').pop();
+      return { icon: null, framework: fw[name] || 'Vite' };
+    },
+
+    // ---------- AI ----------
     async aiChat({ messages }) {
       await new Promise((r) => setTimeout(r, 900));
       const last = messages[messages.length - 1].content || '';

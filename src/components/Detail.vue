@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import { store, activeProject, removeProject, startScript } from '../store.js';
 import { toast, openModal, confirmBox, projectIconStyle } from '../ui.js';
 import TabOverview from './TabOverview.vue';
@@ -18,6 +18,19 @@ const TAB_COMPS = { overview: TabOverview, scripts: TabScripts, git: TabGit, not
 
 const proj = computed(() => activeProject());
 const st = computed(() => store.gitCache[proj.value?.id]?.status);
+const icon = ref('');
+const framework = ref('');
+onMounted(refreshIdent);
+watch(() => proj.value?.id, refreshIdent);
+async function refreshIdent() {
+  icon.value = ''; framework.value = '';
+  if (!proj.value) return;
+  try {
+    const id = await window.pilot.identify(proj.value.path);
+    icon.value = id.icon || '';
+    framework.value = id.framework || '';
+  } catch (e) { /* 用字母占位 */ }
+}
 
 function back() {
   store.view = 'dashboard';
@@ -33,12 +46,14 @@ const openTerminal = (p) => window.pilot.openTerminal(p);
     <header class="topbar detail-bar glass-strong">
       <button class="icon-btn" title="返回 (Esc)" @click="back">←</button>
       <div class="p-icon" :style="{ ...projectIconStyle(proj.color), width: '34px', height: '34px', fontSize: '15px' }">
-        {{ (proj.name || '?').charAt(0).toUpperCase() }}
+        <img v-if="icon" :src="icon" alt="" class="p-icon-img">
+        <template v-else>{{ (proj.name || '?').charAt(0).toUpperCase() }}</template>
       </div>
       <div class="card-title">
         <h2>{{ proj.name }}</h2>
         <p class="p-path" :title="proj.path">{{ proj.path }}</p>
       </div>
+      <span v-if="framework" class="mini-tag mono fw-tag">{{ framework }}</span>
       <div class="top-actions">
         <button class="icon-btn" title="打开文件夹" @click="openPath(proj.path)">▸</button>
         <button class="icon-btn" title="打开终端" @click="openTerminal(proj.path)">⌨</button>

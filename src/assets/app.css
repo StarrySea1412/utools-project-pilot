@@ -713,3 +713,8 @@ body {
 .sug-row.lv2 .sug-idx { color: var(--err); font-weight: 700; }
 .sug-row.lv1 .sug-idx { color: var(--warn); font-weight: 700; }
 .sug-row { scroll-margin: 4px; }
+
+/* 项目真实图标 + 技术栈 tag */
+.p-icon { position: relative; overflow: hidden; }
+.p-icon-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 5px; }
+.fw-tag { color: var(--accent-2); border: 1px solid color-mix(in srgb, var(--accent-2) 30%, transparent); }

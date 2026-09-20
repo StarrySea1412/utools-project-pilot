@@ -114,6 +114,9 @@
     // ---------- AI ----------
     aiChat: (cfg) => post('/api/ai', cfg),
 
+    // ---------- 项目身份识别 ----------
+    identify: (p) => post('/api/ident', { args: [p] }),
+
     // ---------- 系统监测 ----------
     sys: {
       memory() { return fast.memory; },

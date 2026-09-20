@@ -1,6 +1,6 @@
 <script setup>
-import { computed } from 'vue';
-import { store } from '../store.js';
+import { computed, ref, onMounted } from 'vue';
+import { store, projectPorts } from '../store.js';
 import { projectIconStyle, timeAgo, shortPath } from '../ui.js';
 
 const props = defineProps({ project: { type: Object, required: true } });
@@ -17,6 +17,23 @@ const moreCount = computed(() => Math.max(0, props.project.scripts.length - 3));
 function chipRunning(s) { return s.persistent && store.procHandles[s.id]?.running; }
 const openPath = (p) => window.pilot.openPath(p);
 const openTerminal = (p) => window.pilot.openTerminal(p);
+
+// ---- 项目身份：真实 logo + 技术栈 + 运行服务 ----
+const icon = ref('');
+const framework = ref('');
+onMounted(async () => {
+  try {
+    const id = await window.pilot.identify(props.project.path);
+    icon.value = id.icon || '';
+    framework.value = id.framework || '';
+  } catch (e) { /* 识别失败用字母占位 */ }
+});
+const svc = computed(() => {
+  const running = props.project.scripts.find((s) => chipRunning(s));
+  if (!running) return null;
+  const port = (projectPorts(props.project)[0] || {}).port;
+  return { name: running.name, port };
+});
 </script>
 
 <template>
@@ -25,7 +42,8 @@ const openTerminal = (p) => window.pilot.openTerminal(p);
            @click="emit('open', project.id)" @keydown.enter="emit('open', project.id)">
     <div class="card-top">
       <div class="p-icon" :style="{ ...projectIconStyle(project.color), width: '38px', height: '38px', fontSize: '17px' }">
-        {{ (project.name || '?').charAt(0).toUpperCase() }}
+        <img v-if="icon" :src="icon" alt="" class="p-icon-img">
+        <template v-else>{{ (project.name || '?').charAt(0).toUpperCase() }}</template>
       </div>
       <div class="card-title">
         <h3 :title="project.name">{{ project.name }}<span v-if="anyRunning" class="run-dot" title="服务运行中"></span></h3>
@@ -44,6 +62,8 @@ const openTerminal = (p) => window.pilot.openTerminal(p);
         <span v-if="status.ahead" class="ab" title="领先远程">↑{{ status.ahead }}</span>
         <span v-if="status.behind" class="ab" title="落后远程">↓{{ status.behind }}</span>
       </span>
+      <span v-if="svc" class="mini-tag svc" :title="'服务运行中：' + svc.name">⚡ {{ svc.name }}<template v-if="svc.port"> :{{ svc.port }}</template></span>
+      <span v-if="framework" class="mini-tag mono fw-tag">{{ framework }}</span>
     </div>
 
     <div v-if="project.scripts.length" class="script-chips">
