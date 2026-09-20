@@ -23,6 +23,7 @@ async function doAdd() {
     if (!(await window.pilot.fs.exists(p))) { toast(`路径不存在: ${p}`, 'err'); continue; }
     const proj = addProject(p);
     if (proj) { proj.tags = tagList.slice(); saveProjects(); added++; }
+    else toast(`已存在，跳过: ${p}`, 'warn');
   }
   if (added) {
     toast(`已添加 ${added} 个项目`, 'ok');

@@ -22,6 +22,9 @@ const isWin = process.platform === 'win32';
 // 单次请求异常不拖垮整个服务
 process.on('uncaughtException', (e) => console.error('[uncaughtException]', (e && e.stack) || e));
 process.on('unhandledRejection', (e) => console.error('[unhandledRejection]', (e && (e.stack || e.message)) || e));
+process.on('exit', (code) => console.error(`[exit] 进程退出 code=${code} ${new Date().toLocaleString()}`));
+process.on('SIGINT', () => { console.error('[sigint] 收到中断'); process.exit(130); });
+process.on('SIGTERM', () => { console.error('[sigterm] 收到终止'); process.exit(143); });
 
 // ---------- 进程执行 ----------
 function runCmd(cmd, args, opts = {}) {
@@ -413,6 +416,8 @@ const server = http.createServer(async (req, res) => {
       }
       const body = await readBody(req);
       if (key === 'POST /api/db') { dbCache[body.key] = body.value; await fsp.writeFile(DB_FILE, JSON.stringify(dbCache, null, 2)); return sendJson(res, 200, { ok: true }); }
+      // 注意：/api/proc/start 必须先于 /api/proc/:id 匹配，否则 start 被当成进程 id 走 stopProc
+      if (p === '/api/proc/start' && req.method === 'POST') return sendJson(res, 200, startScript(body.cwd, body.script || {}));
       let m;
       if ((m = p.match(/^\/api\/proc\/([^/]+)$/))) {
         if (req.method === 'GET') {
@@ -424,7 +429,6 @@ const server = http.createServer(async (req, res) => {
       }
       if (p === '/api/sys/ports' && req.method === 'POST') return sendJson(res, 200, await sysPorts());
       if (p === '/api/run-once') return sendJson(res, 200, await runOnce(body.cwd, body.cmd, body.timeoutMs));
-      if (p === '/api/proc/start') return sendJson(res, 200, startScript(body.cwd, body.script || {}));
       if (p === '/api/ai') return sendJson(res, 200, await aiChat(body));
       if (p === '/api/shell') return sendJson(res, 200, await shellAction(body.op, body.arg));
       if ((m = p.match(/^\/api\/git\/(\w+)$/)) && req.method === 'POST') {
