@@ -5,6 +5,8 @@ import { ui, toast, openModal, confirmBox, timeAgo, shortPath, PROJECT_COLORS, p
 import ProjectCard from './ProjectCard.vue';
 import SysBar from './SysBar.vue';
 import Suggestions from './Suggestions.vue';
+import TodoPanel from './TodoPanel.vue';
+import NotifCenter from './NotifCenter.vue';
 import AddProjectModal from '../modals/AddProjectModal.vue';
 import EditProjectModal from '../modals/EditProjectModal.vue';
 import SettingsModal from '../modals/SettingsModal.vue';
@@ -32,6 +34,7 @@ const visibleProjects = computed(() => {
 });
 
 const totalDirty = computed(() => store.projects.reduce((n, p) => n + (store.gitCache[p.id]?.status?.dirty || 0), 0));
+const unread = computed(() => store.notifications.filter((n) => !n.read).length);
 
 function toggleTheme() {
   const cur = document.documentElement.dataset.theme;
@@ -94,6 +97,9 @@ function runFromCard(proj, script) {
       </div>
     </div>
     <div class="top-actions">
+      <button class="icon-btn" title="通知中心" @click="store.notifOpen = true">
+        🔔<span v-if="unread" class="notif-badge">{{ unread > 9 ? '9+' : unread }}</span>
+      </button>
       <button class="icon-btn" title="切换主题" @click="toggleTheme">◐</button>
       <button class="icon-btn" title="设置" @click="openModal(SettingsModal, {}, { title: '设置', wide: true })">⚙</button>
       <button class="btn btn-primary" @click="openModal(AddProjectModal, {}, { title: '添加项目' })">＋ 添加项目</button>
@@ -102,6 +108,7 @@ function runFromCard(proj, script) {
 
   <SysBar />
   <Suggestions @open-detail="emit('open-detail', $event)" />
+  <TodoPanel @open-detail="emit('open-detail', $event)" />
 
   <div class="toolbar">
     <div class="tag-chips">

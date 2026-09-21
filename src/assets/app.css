@@ -746,3 +746,30 @@ body {
 .ctx-menu button { all: unset; cursor: pointer; font-size: 12px; color: var(--text-1, var(--text)); padding: 6px 9px; border-radius: 7px; }
 .ctx-menu button:hover { background: var(--hover); }
 .ctx-menu button:first-of-type { color: var(--accent); font-weight: 600; }
+
+/* 待办面板（Quick Notes） */
+.todo-input-row { padding: 2px 2px 8px; }
+.todo-input-row .input { width: 100%; }
+.todo-row { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 8px; font-size: 12.5px; }
+.todo-row:hover { background: var(--hover); }
+.todo-row.done .todo-text { color: var(--text-3); text-decoration: line-through; }
+.todo-check { all: unset; cursor: pointer; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid var(--stroke-soft); flex-shrink: 0; display: grid; place-items: center; font-size: 9px; color: #fff; }
+.todo-check:hover { border-color: var(--ok); }
+.todo-check.checked { background: var(--ok); border-color: var(--ok); }
+.todo-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+.todo-row .mini-tag { cursor: pointer; }
+.todo-row .icon-btn.sm { opacity: 0; }
+.todo-row:hover .icon-btn.sm { opacity: .7; }
+
+/* 通知中心 */
+.notif-modal { max-height: 70vh; display: flex; flex-direction: column; }
+.notif-modal .modal-body-inner { overflow-y: auto; }
+.notif-modal .modal-head { display: flex; align-items: center; gap: 8px; }
+.notif-row { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 12.5px; }
+.notif-row:hover { background: var(--hover); }
+.notif-row.unread { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.notif-ico { flex-shrink: 0; }
+.notif-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notif-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.notif-badge { position: absolute; top: -3px; right: -3px; min-width: 15px; height: 15px; border-radius: 999px; background: var(--err); color: #fff; font-size: 9px; font-weight: 700; display: grid; place-items: center; padding: 0 3px; line-height: 1; }
+.top-actions .icon-btn { position: relative; }

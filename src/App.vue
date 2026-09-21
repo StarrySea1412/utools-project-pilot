@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard.vue';
 import Detail from './components/Detail.vue';
 import ToastHost from './components/ToastHost.vue';
 import ModalHost from './components/ModalHost.vue';
+import NotifCenter from './components/NotifCenter.vue';
 import ConsoleDrawer from './components/ConsoleDrawer.vue';
 
 function init() {
@@ -89,5 +90,6 @@ function openDetail(id) {
     <ToastHost />
     <ModalHost />
     <ConsoleDrawer />
+    <NotifCenter />
   </div>
 </template>
