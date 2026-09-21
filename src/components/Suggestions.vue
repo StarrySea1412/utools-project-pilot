@@ -41,7 +41,6 @@ async function runAi() {
   <section class="sug-panel glass">
     <div class="sug-head" @click="store.suggestionsOpen = !store.suggestionsOpen">
       <h4 class="panel-title">🛰 领航建议</h4>
-      <span class="panel-en">MISSION BRIEF</span>
       <span v-if="urgent" class="tab-badge">{{ urgent }} 项紧急</span>
       <span v-else class="hint">{{ list.length }} 条</span>
       <span class="spacer"></span>
@@ -49,8 +48,7 @@ async function runAi() {
       <button class="icon-btn" @click.stop="store.suggestionsOpen = !store.suggestionsOpen">{{ store.suggestionsOpen ? '⌄' : '⌃' }}</button>
     </div>
     <div v-if="store.suggestionsOpen" class="sug-list">
-      <div v-for="(s, i) in list" :key="s.id" class="sug-row" :class="'lv' + s.level">
-        <span class="sug-idx">{{ String(i + 1).padStart(2, '0') }}</span>
+      <div v-for="s in list" :key="s.id" class="sug-row" :class="'lv' + s.level">
         <span class="sug-ico">{{ s.icon }}</span>
         <span class="sug-text">{{ s.text }}</span>
         <span v-if="s.sub" class="sug-sub">{{ s.sub }}</span>

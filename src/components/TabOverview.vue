@@ -62,7 +62,6 @@ function toGit() { store.detailTab = 'git'; }
 
     <section v-if="runningScripts.length" class="glass panel svc-panel">
       <h4 class="panel-title">⚡ 服务
-        <span class="panel-en">SERVICES</span>
         <span v-if="portsOf.length" class="mini-tag svc mono" title="点击打开">{{ portsOf.map((p) => ':' + p.port).join(' ') }}</span>
       </h4>
       <div class="svc-rows">

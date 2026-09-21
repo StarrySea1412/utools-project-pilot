@@ -41,7 +41,7 @@ const svc = computed(() => {
            :data-id="project.id" tabindex="0"
            @click="emit('open', project.id)" @keydown.enter="emit('open', project.id)">
     <div class="card-top">
-      <div class="p-icon" :style="{ ...projectIconStyle(project.color), width: '38px', height: '38px', fontSize: '17px' }">
+      <div class="p-icon" :style="{ ...projectIconStyle(project.color), width: '42px', height: '42px', fontSize: '19px' }">
         <img v-if="icon" :src="icon" alt="" class="p-icon-img">
         <template v-else>{{ (project.name || '?').charAt(0).toUpperCase() }}</template>
       </div>

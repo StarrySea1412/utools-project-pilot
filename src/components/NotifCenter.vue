@@ -24,7 +24,6 @@ function open(n) {
       <div class="modal glass-strong notif-modal" role="dialog">
         <div class="modal-head">
           <h3>🔔 通知中心</h3>
-          <span class="panel-en">NOTIFICATIONS</span>
           <span class="spacer"></span>
           <button v-if="unread" class="btn btn-ghost sm" @click="markAllNotifRead()">全部已读</button>
           <button class="icon-btn" @click="store.notifOpen = false">✕</button>

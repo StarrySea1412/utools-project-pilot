@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>项目领航员 · 设计稿对比</title>
+<style>
+/* ============ 设计 token：三层明度阶梯 + 单主色 ============ */
+body[data-theme="dark"] {
+  --bg: #0e1116;            /* 页面底 */
+  --card: #161b23;          /* 卡片 */
+  --card-2: #1d242e;        /* 嵌套块 */
+  --line: rgba(255,255,255,.07);
+  --line-strong: rgba(255,255,255,.12);
+  --text: #e6eaf0;
+  --text-2: #9aa4b2;
+  --text-3: #5d6774;
+  --accent: #4d9fff;
+  --accent-soft: rgba(77,159,255,.12);
+  --ai: linear-gradient(135deg,#7b5cff,#b44dff);
+  --ok: #3fb96f; --warn: #e0a52e; --bad: #e05a5a;
+  --chip-bg: rgba(255,255,255,.06);
+  --radius: 8px; --radius-l: 12px; --radius-xl: 16px;
+}
+body[data-theme="light"] {
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --card-2: #f0f2f5;
+  --line: rgba(20,30,45,.08);
+  --line-strong: rgba(20,30,45,.16);
+  --text: #1c2530;
+  --text-2: #5b6673;
+  --text-3: #98a1ac;
+  --accent: #2f7fe8;
+  --accent-soft: rgba(47,127,232,.10);
+  --ai: linear-gradient(135deg,#6b4bff,#a83de8);
+  --ok: #2f9e5b; --warn: #c98a1a; --bad: #d94f4f;
+  --chip-bg: rgba(20,30,45,.05);
+  --radius: 8px; --radius-l: 12px; --radius-xl: 16px;
+}
+body[data-theme="hud"] {
+  /* 收敛 HUD：深色底 + 航行蓝单色秩序，装饰降到最低 */
+  --bg: #0a0f14;
+  --card: #101821;
+  --card-2: #16212d;
+  --line: rgba(90,180,255,.10);
+  --line-strong: rgba(90,180,255,.20);
+  --text: #d8e6f2;
+  --text-2: #7f95a8;
+  --text-3: #4e6172;
+  --accent: #3ea6ff;
+  --accent-soft: rgba(62,166,255,.12);
+  --ai: linear-gradient(135deg,#3ea6ff,#7b5cff);
+  --ok: #35c98f; --warn: #ffb84d; --bad: #ff6b6b;
+  --chip-bg: rgba(62,166,255,.08);
+  --radius: 4px; --radius-l: 6px; --radius-xl: 8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+  background: var(--bg); color: var(--text);
+  font-variant-numeric: tabular-nums;
+  transition: background .25s, color .25s;
+}
+body[data-theme="hud"] {
+  background-image: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(62,166,255,.06), transparent);
+}
+.num { font-variant-numeric: tabular-nums; }
+
+/* ============ 对比工具条（非设计稿内容） ============ */
+.picker {
+  position: sticky; top: 0; z-index: 99;
+  display: flex; gap: 12px; align-items: center;
+  padding: 10px 16px;
+  background: #21262e; color: #fff;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  font-size: 13px;
+}
+.picker b { margin-right: 4px; }
+.picker button {
+  padding: 5px 14px; border-radius: 6px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,.2); background: transparent; color: #fff;
+  font-size: 13px;
+}
+.picker button.on { background: #4d9fff; border-color: #4d9fff; }
+.picker .sep { width: 1px; height: 18px; background: rgba(255,255,255,.2); }
+
+/* ============ 通用组件 ============ */
+.app { max-width: 980px; margin: 0 auto; padding: 12px 16px 40px; }
+.card {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius-xl); padding: 14px 16px;
+}
+.card h4 { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+.sub { font-size: 11px; color: var(--text-3); }
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: var(--radius);
+  border: 1px solid var(--line-strong); background: transparent;
+  color: var(--text-2); font-size: 12px; cursor: pointer;
+}
+.btn:hover { color: var(--text); border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.ai { background: var(--ai); border: none; color: #fff; }
+.btn.sm { padding: 3px 9px; font-size: 11px; }
+.chip {
+  padding: 3px 10px; border-radius: 999px; font-size: 11px;
+  background: var(--chip-bg); color: var(--text-2); cursor: pointer;
+  border: 1px solid transparent;
+}
+.chip.on { background: var(--accent-soft); color: var(--accent); border-color: transparent; font-weight: 600; }
+
+/* ============ 顶栏 ============ */
+.topbar { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.topbar h1 { font-size: 16px; font-weight: 700; }
+.sys { display: flex; gap: 10px; margin-left: auto; align-items: center; }
+.sysitem {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius-l); padding: 6px 12px;
+  display: flex; align-items: center; gap: 8px; font-size: 12px;
+}
+.sysitem .bar { width: 56px; height: 4px; border-radius: 2px; background: var(--chip-bg); overflow: hidden; }
+.sysitem .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+.sysitem .val { font-weight: 600; }
+.ports { display: flex; gap: 6px; }
+.port {
+  font-size: 11px; padding: 3px 8px; border-radius: var(--radius);
+  background: var(--card-2); color: var(--text-2); border: 1px solid var(--line);
+}
+.port b { color: var(--accent); font-weight: 600; }
+
+/* ============ 建议区：severity 色条卡片 ============ */
+.grid-top { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.sugg { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; }
+.sugg + .sugg { border-top: 1px solid var(--line); }
+.sugg .sev { width: 3px; align-self: stretch; border-radius: 2px; flex: none; }
+.sev.warn { background: var(--warn); } .sev.info { background: var(--accent); } .sev.bad { background: var(--bad); }
+.sugg .t { font-size: 12.5px; }
+.sugg .d { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.sugg .btn { margin-left: auto; flex: none; }
+
+/* ============ 项目卡：主角 ============ */
+.cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.proj {
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--radius-xl); padding: 16px;
+  transition: border-color .15s;
+}
+.proj:hover { border-color: var(--line-strong); }
+.proj .head { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+.proj .ico {
+  width: 34px; height: 34px; border-radius: var(--radius-l);
+  background: var(--card-2); display: grid; place-items: center;
+  font-weight: 700; font-size: 14px; color: var(--text-2); flex: none;
+}
+.proj h3 { font-size: 14px; font-weight: 650; }
+.proj .path { font-size: 11px; color: var(--text-3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.tag { font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: var(--chip-bg); color: var(--text-2); }
+.badge-git { font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+.badge-git .num { font-weight: 700; }
+.scripts { display: flex; gap: 6px; align-items: center; }
+.scripts .run {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; padding: 3px 10px; border-radius: var(--radius);
+  background: var(--card-2); border: 1px solid var(--line); color: var(--text-2);
+}
+.scripts .run.main { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; }
+.scripts .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); margin-left: auto; }
+.scripts .dot + span { font-size: 10.5px; color: var(--ok); }
+
+/* ============ 详情页 ============ */
+.dhead { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.dhead .back { font-size: 16px; color: var(--text-2); cursor: pointer; }
+.dhead .ico { width: 38px; height: 38px; border-radius: var(--radius-l); background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; font-weight: 700; color: var(--text-2); }
+.dhead h2 { font-size: 17px; }
+.dhead .acts { margin-left: auto; display: flex; gap: 8px; }
+.tabs { display: flex; gap: 2px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-l); padding: 3px; width: fit-content; margin-bottom: 14px; }
+.tabs button {
+  padding: 5px 14px; font-size: 12.5px; border-radius: var(--radius);
+  border: none; background: transparent; color: var(--text-2); cursor: pointer;
+}
+.tabs button.on { background: var(--card-2); color: var(--text); font-weight: 600; }
+.stats { display: flex; gap: 12px; margin-bottom: 14px; }
+.stat { flex: 1; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-l); padding: 12px 14px; }
+.stat .n { font-size: 20px; font-weight: 700; }
+.stat .l { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.svc { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--card-2); border-radius: var(--radius-l); margin-bottom: 8px; }
+.svc .name { font-weight: 600; font-size: 13px; }
+.svc .cmd { font-size: 11px; color: var(--text-3); font-family: Consolas, monospace; }
+.commits { list-style: none; }
+.commits li { display: flex; gap: 10px; align-items: baseline; padding: 8px 0; font-size: 12.5px; }
+.commits li + li { border-top: 1px solid var(--line); }
+.type { font-size: 10.5px; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); flex: none; }
+.type.feat { background: rgba(63,185,111,.15); color: var(--ok); }
+.type.fix { background: rgba(224,90,90,.15); color: var(--bad); }
+.commits .time { margin-left: auto; font-size: 11px; color: var(--text-3); flex: none; }
+
+/* ============ Git 页 ============ */
+.gitcols { display: grid; grid-template-columns: 300px 1fr; gap: 12px; }
+.filelist { list-style: none; }
+.filelist li {
+  display: flex; gap: 8px; align-items: center; padding: 7px 10px;
+  font-size: 12px; border-radius: var(--radius); cursor: pointer;
+}
+.filelist li.on { background: var(--accent-soft); color: var(--accent); }
+.filelist li + li { margin-top: 1px; }
+.filelist .st { margin-left: auto; font-size: 10px; color: var(--text-3); }
+.diff {
+  font-family: Consolas, "Courier New", monospace; font-size: 12px; line-height: 1.7;
+  background: var(--card-2); border-radius: var(--radius-l); padding: 12px 14px; overflow-x: auto;
+}
+.diff .add { color: var(--ok); background: rgba(63,185,111,.08); display: block; border-radius: 3px; }
+.diff .del { color: var(--bad); background: rgba(224,90,90,.08); display: block; border-radius: 3px; }
+.diff .ctx { color: var(--text-3); display: block; }
+</style>
+</head>
+<body data-theme="dark">
+
+<div class="picker">
+  <b>皮肤</b>
+  <button data-t="dark" class="on">深色工具风</button>
+  <button data-t="light">浅色工具风</button>
+  <button data-t="hud">收敛 HUD 风</button>
+  <span class="sep"></span>
+  <b>页面</b>
+  <button data-p="dash" class="on">仪表盘</button>
+  <button data-p="detail">项目详情</button>
+  <button data-p="git">Git 工作台</button>
+</div>
+
+<div class="app">
+
+<!-- ================= 仪表盘 ================= -->
+<section data-page="dash">
+  <div class="topbar">
+    <h1>项目领航员</h1>
+    <div class="sys">
+      <div class="sysitem"><span class="val num">64%</span><span class="bar"><i style="width:64%"></i></span><span class="sub">内存 20.5/32G</span></div>
+      <div class="sysitem"><span class="val num">19%</span><span class="sub">CPU · 16 核</span></div>
+      <div class="ports">
+        <span class="port"><b>:3000</b> Node</span>
+        <span class="port"><b>:5173</b> Vite</span>
+        <span class="port"><b>:3306</b> MySQL</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-top">
+    <div class="card">
+      <h4>领航建议 <span class="sub" style="margin-left:6px">3 条待处理</span></h4>
+      <div class="sugg">
+        <div class="sev warn"></div>
+        <div><div class="t">「axonhub」有 5 个未提交变更</div><div class="d">master 分支 · 已 2 天未提交</div></div>
+        <button class="btn sm">去处理</button>
+      </div>
+      <div class="sugg">
+        <div class="sev info"></div>
+        <div><div class="t">「ai-learning-platform」落后远程 2 个提交</div><div class="d">建议先拉取再继续开发，避免大冲突</div></div>
+        <button class="btn sm">去处理</button>
+      </div>
+      <div class="sugg">
+        <div class="sev bad"></div>
+        <div><div class="t">自动任务「依赖巡检」失败 1 次</div><div class="d">今天 09:12 · 退出码 1</div></div>
+        <button class="btn sm">查看日志</button>
+      </div>
+      <div style="margin-top:10px"><button class="btn ai sm">✦ AI 今日建议</button></div>
+    </div>
+    <div class="card">
+      <h4>待办 <span class="sub" style="margin-left:6px">全部 5</span></h4>
+      <div class="sugg"><div class="sev info"></div><div><div class="t">给 cc-probe 补渠道超时重试</div><div class="d">dev · 今天</div></div></div>
+      <div class="sugg"><div class="sev info"></div><div><div class="t">对齐 plugin.json 版本号与作者信息</div><div class="d">utools · 发布前</div></div></div>
+      <div class="sugg"><div class="sev info"></div><div><div class="t">K8s 篇开课大纲</div><div class="d">learning · 本周</div></div></div>
+      <div style="margin-top:10px"><input placeholder="记一件小事，回车添加…" style="width:100%;padding:7px 10px;border-radius:var(--radius);border:1px solid var(--line);background:var(--card-2);color:var(--text);font-size:12px;outline:none"></div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="proj">
+      <div class="head">
+        <div class="ico">U</div>
+        <div><h3>utools-project-pilot</h3><div class="path">D:/project/utools-project-pilot</div></div>
+      </div>
+      <div class="meta"><span class="tag">utools</span><span class="tag">Vue</span><span class="badge-git">main · <span class="num">0</span> 未提交</span></div>
+      <div class="scripts"><span class="run main">▶ dev</span><span class="run">build</span><span class="dot"></span><span>运行中 :5173</span></div>
+    </div>
+    <div class="proj">
+      <div class="head">
+        <div class="ico">A</div>
+        <div><h3>axonhub</h3><div class="path">D:/demo/axonhub</div></div>
+      </div>
+      <div class="meta"><span class="tag">tool</span><span class="tag">Electron</span><span class="badge-git">master · <span class="num">5</span> 未提交</span></div>
+      <div class="scripts"><span class="run main">▶ start</span><span class="run">test</span><span class="dot"></span><span>运行中 :3000</span></div>
+    </div>
+    <div class="proj">
+      <div class="head">
+        <div class="ico">A</div>
+        <div><h3>ai-learning-platform</h3><div class="path">D:/project/ai-learning-platform</div></div>
+      </div>
+      <div class="meta"><span class="tag">dev</span><span class="tag">Python</span><span class="badge-git">feat/gallery-ui · <span class="num">1</span> 未提交</span></div>
+      <div class="scripts"><span class="run main">▶ dev</span><span class="run">lint</span></div>
+    </div>
+    <div class="proj">
+      <div class="head">
+        <div class="ico">C</div>
+        <div><h3>cc-probe</h3><div class="path">D:/project/cc-probe</div></div>
+      </div>
+      <div class="meta"><span class="tag">dev</span><span class="tag">Node</span><span class="badge-git">main · <span class="num">0</span> 未提交</span></div>
+      <div class="scripts"><span class="run main">▶ probe</span><span class="run">test</span></div>
+    </div>
+    <div class="proj">
+      <div class="head">
+        <div class="ico">H</div>
+        <div><h3>hermes-director-studio</h3><div class="path">D:/project/hermes-director-studio</div></div>
+      </div>
+      <div class="meta"><span class="tag">dev</span><span class="tag">TS</span></div>
+      <div class="scripts"><span class="run main">▶ dev</span><span class="run">storyboard</span></div>
+    </div>
+    <div class="proj">
+      <div class="head">
+        <div class="ico">P</div>
+        <div><h3>palette-lab</h3><div class="path">D:/demo/palette-lab</div></div>
+      </div>
+      <div class="meta"><span class="tag">color</span><span class="tag">Vue</span></div>
+      <div class="scripts"><span class="run main">▶ dev</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 项目详情 ================= -->
+<section data-page="detail" hidden>
+  <div class="dhead">
+    <span class="back">←</span>
+    <div class="ico">A</div>
+    <div><h2>axonhub</h2><div class="sub">D:/demo/axonhub</div></div>
+    <div class="acts">
+      <button class="btn sm">📂 打开文件夹</button>
+      <button class="btn sm">⌨ 终端</button>
+      <button class="btn primary sm">⑂ 查看 Git</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="on">概览</button><button>脚本</button><button>Git</button><button>备忘</button><button>任务</button><button>文件</button>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="n num">5</div><div class="l">未提交变更 · master ↑1 ↓0</div></div>
+    <div class="stat"><div class="n num">3</div><div class="l">脚本</div></div>
+    <div class="stat"><div class="n num">1/1</div><div class="l">自动任务</div></div>
+  </div>
+  <div class="grid-top">
+    <div class="card">
+      <h4>服务 <span class="sub" style="margin-left:6px">端口来自本机 netstat 实时关联</span></h4>
+      <div class="svc"><span class="dot" style="width:7px;height:7px;border-radius:50%;background:var(--ok)"></span><div><div class="name">start</div><div class="cmd">npm run start</div></div><button class="btn sm" style="margin-left:auto">停止</button></div>
+      <div class="svc"><span class="dot" style="width:7px;height:7px;border-radius:50%;background:var(--text-3)"></span><div><div class="name">build</div><div class="cmd">npm run build</div></div><button class="btn primary sm" style="margin-left:auto">启动</button></div>
+    </div>
+    <div class="card">
+      <h4>最近提交</h4>
+      <ul class="commits">
+        <li><span class="type">chore</span>record journal<span class="time num">5 小时前</span></li>
+        <li><span class="type">perf</span>优化插件冷启动首帧<span class="time num">6 小时前</span></li>
+        <li><span class="type feat">feat</span>添加项目关联跳转功能<span class="time num">18 小时前</span></li>
+        <li><span class="type feat">feat</span>优化 remote 管理菜单布局<span class="time num">1 天前</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ================= Git 工作台 ================= -->
+<section data-page="git" hidden>
+  <div class="dhead">
+    <span class="back">←</span>
+    <div class="ico">A</div>
+    <div><h2>axonhub · Git</h2><div class="sub">master · ↑1 ↓0 · 5 个变更</div></div>
+    <div class="acts">
+      <button class="btn sm">拉取</button>
+      <button class="btn sm">推送</button>
+      <button class="btn primary sm">提交</button>
+      <button class="btn ai sm">✦ AI 生成提交信息</button>
+    </div>
+  </div>
+  <div class="gitcols">
+    <div class="card" style="padding:8px">
+      <h4 style="padding:8px 10px 4px">未暂存 · 3</h4>
+      <ul class="filelist">
+        <li class="on">src/main/process.js<span class="st">M</span></li>
+        <li>src/ui/panel.css<span class="st">M</span></li>
+        <li>docs/notes.md<span class="st">U</span></li>
+      </ul>
+      <h4 style="padding:8px 10px 4px;border-top:1px solid var(--line);margin-top:6px">已暂存 · 2</h4>
+      <ul class="filelist">
+        <li>preload/bridge.js<span class="st">M</span></li>
+        <li>package.json<span class="st">M</span></li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>src/main/process.js</h4>
+      <div class="diff">
+<span class="ctx">@@ -12,7 +12,9 @@ function spawn(cmd, args) {</span>
+<span class="ctx">   const child = spawn(cmd, args, {</span>
+<span class="ctx">     cwd: this.root,</span>
+<span class="add">+    shell: process.platform === 'win32',</span>
+<span class="add">+    windowsHide: true,</span>
+<span class="ctx">   });</span>
+<span class="del">-  child.on('exit', this.handleExit);</span>
+<span class="add">+  child.once('exit', this.handleExit);</span>
+<span class="ctx">   return child;</span>
+<span class="ctx"> }</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<script>
+document.querySelectorAll('.picker button[data-t]').forEach(b => b.onclick = () => {
+  document.body.dataset.theme = b.dataset.t;
+  document.querySelectorAll('.picker button[data-t]').forEach(x => x.classList.toggle('on', x === b));
+});
+document.querySelectorAll('.picker button[data-p]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('section[data-page]').forEach(s => s.hidden = s.dataset.page !== b.dataset.p);
+  document.querySelectorAll('.picker button[data-p]').forEach(x => x.classList.toggle('on', x === b));
+});
+</script>
+</body>
+</html>

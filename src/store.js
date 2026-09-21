@@ -37,7 +37,7 @@ export const store = reactive({
   suggestionsOpen: true,
   todosOpen: true,         // 待办面板折叠状态
   notifOpen: false,        // 通知中心弹窗
-  todos: [],               // 全局待办：{id, text, projectId?, done, createdAt, doneAt}
+  todos: [],               // 全局待办：{id, text, projectId?, q(0-3 四象限), done, createdAt, doneAt}
   notifications: [],       // 通知中心：{id, icon, text, time, read, projectId?}
 });
 
@@ -61,12 +61,19 @@ export function saveTodos() {
   try { window.pilot?.dbPut('pilot:todos', { todos: store.todos }); } catch (e) { console.error('保存待办失败', e); }
 }
 let todoSeq = 0;
-export function addTodo(text, projectId = null) {
+export function addTodo(text, projectId = null, q = 1) {
   const t = text.trim();
   if (!t) return null;
-  store.todos.unshift({ id: 'td_' + Date.now().toString(36) + (++todoSeq), text: t, projectId, done: false, createdAt: Date.now(), doneAt: 0 });
+  store.todos.unshift({ id: 'td_' + Date.now().toString(36) + (++todoSeq), text: t, projectId, q, done: false, createdAt: Date.now(), doneAt: 0 });
   saveTodos();
   return store.todos[0];
+}
+// 四象限：0 紧急·重要 / 1 重要·不紧急 / 2 紧急·不重要 / 3 都不（旧数据无 q 视为 1）
+export function setTodoQuad(id, q) {
+  const t = store.todos.find((x) => x.id === id);
+  if (!t) return;
+  t.q = ((q % 4) + 4) % 4;
+  saveTodos();
 }
 export function toggleTodo(id) {
   const t = store.todos.find((x) => x.id === id);

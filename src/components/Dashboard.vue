@@ -92,8 +92,7 @@ function runFromCard(proj, script) {
     <div class="brand">
       <div class="logo-mini">✈</div>
       <div class="brand-txt">
-        <div class="brand-line"><h1>项目领航员</h1><span class="chip-pm">PM</span></div>
-        <span class="brand-en">PROJECT PILOT · NAV CONSOLE</span>
+        <div class="brand-line"><h1>项目领航员</h1></div>
       </div>
     </div>
     <div class="top-actions">
