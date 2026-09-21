@@ -1,9 +1,9 @@
 {
   "pluginName": "项目领航员",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "快捷管理本地项目与服务：脚本启动、Git 变更与历史、备忘、自动任务、AI 提交信息与提交记录分析。iOS 磨砂玻璃质感。",
-  "author": "you",
-  "homepage": "https://github.com/your-name/utools-project-pilot",
+  "author": "starry-sea-1412",
+  "homepage": "https://github.com/starry-sea-1412/utools-project-pilot",
   "logo": "logo.png",
   "preload": "preload.js",
   "main": "dist/index.html",
