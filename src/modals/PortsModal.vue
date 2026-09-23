@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue';
 import { store } from '../store.js';
 import { closeModal } from '../ui.js';
+import Icon from '../components/Icon.vue';
 import { portLabel, portKind, KIND_LABEL } from '../ports.js';
 
 // 系统端口沉底，业务端口靠前
@@ -43,8 +44,8 @@ async function kill(p) {
         <span class="mini-tag" :class="'kind-' + portKind(p)">{{ KIND_LABEL[portKind(p)] }}</span>
         <span class="port-names">{{ (p.names.join(', ') || '未知进程') + (portLabel(p.port) ? ' · ' + portLabel(p.port) : '') }}</span>
         <span class="port-pids">PID {{ p.pids.join(' / ') || '—' }}</span>
-        <button v-if="canKill(p)" class="kill-btn" :class="{ armed: armed === p.port }" :title="armed === p.port ? '再点一次确认结束该进程树' : '结束该进程树（taskkill /T /F）'" @click.stop="kill(p)">{{ armed === p.port ? '确认结束' : '✕' }}</button>
-        <span v-else class="kill-btn kill-off" title="系统关键进程不可结束">✕</span>
+        <button v-if="canKill(p)" class="kill-btn" :class="{ armed: armed === p.port }" :title="armed === p.port ? '再点一次确认结束该进程树' : '结束该进程树（taskkill /T /F）'" @click.stop="kill(p)"><template v-if="armed === p.port">确认结束</template><Icon v-else name="X" :size="11" /></button>
+        <span v-else class="kill-btn kill-off" title="系统关键进程不可结束"><Icon name="X" :size="11" /></span>
         <span v-if="isHttp(p.port)" class="mini-tag svc">HTTP</span>
       </div>
       <p v-if="!ports.length" class="hint pad">没有发现监听中的 TCP 端口。</p>

@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { store, saveSettings } from '../store.js';
 import { toast, closeModal, openModal, applyTheme } from '../ui.js';
 import ModeModal from './ModeModal.vue';
+import Icon from '../components/Icon.vue';
 
 const ai = store.settings.ai;
 const baseUrl = ref(ai.baseUrl || '');
@@ -47,7 +48,7 @@ function editMode(m) { openModal(ModeModal, { mode: m }, { title: '编辑分析�
 <template>
   <div class="modal-body-inner settings-body">
     <section class="set-section">
-      <h4>🤖 AI 服务（OpenAI 兼容接口）</h4>
+      <h4><Icon name="Bot" :size="13" /> AI 服务（OpenAI 兼容接口）</h4>
       <label class="field"><span class="f-label">Base URL</span>
         <input v-model="baseUrl" class="input mono" placeholder="https://api.openai.com/v1">
         <span class="f-hint">兼容 OpenAI 格式的任意服务：DeepSeek、Moonshot、通义、OpenRouter 等</span>
@@ -67,7 +68,7 @@ function editMode(m) { openModal(ModeModal, { mode: m }, { title: '编辑分析�
     </section>
 
     <section class="set-section">
-      <h4>✦ 提交信息生成提示词</h4>
+      <h4><Icon name="Sparkles" :size="13" /> 提交信息生成提示词</h4>
       <label class="field"><span class="f-label">System 提示词</span>
         <textarea v-model="commitPrompt" class="input mono" rows="4"></textarea>
         <span class="f-hint">留空使用默认。定义 AI 生成 commit message 的风格与规范。</span>
@@ -75,19 +76,19 @@ function editMode(m) { openModal(ModeModal, { mode: m }, { title: '编辑分析�
     </section>
 
     <section class="set-section">
-      <h4>📊 提交记录分析模式（{{ store.settings.analysisModes.length }}）</h4>
+      <h4><Icon name="ListChecks" :size="13" /> 提交记录分析模式（{{ store.settings.analysisModes.length }}）</h4>
       <ul class="mode-manage">
         <li v-for="m in store.settings.analysisModes" :key="m.id">
           <span>{{ m.name }}</span>
           <span class="mini-tag" :class="{ svc: !m.builtin }">{{ m.builtin ? '内置' : '自定义' }}</span>
-          <button class="icon-btn" @click="editMode(m)">✏️</button>
+          <button class="icon-btn" @click="editMode(m)"><Icon name="Pencil" :size="13" /></button>
         </li>
       </ul>
-      <button class="btn btn-ghost" @click="addMode">＋ 添加自定义模式</button>
+      <button class="btn btn-ghost" @click="addMode"><Icon name="Plus" :size="13" /> 添加自定义模式</button>
     </section>
 
     <section class="set-section">
-      <h4>🎨 外观</h4>
+      <h4><Icon name="SunMoon" :size="13" /> 外观</h4>
       <div class="field"><span class="f-label">主题</span>
         <select v-model="theme" class="select full">
           <option value="auto">跟随系统</option>

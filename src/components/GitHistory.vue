@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
 import { store } from '../store.js';
-import { timeAgo, fmtDate, commitType, toast } from '../ui.js';
+import { timeAgo, fmtDate, commitType, toast, confirmBox } from '../ui.js';
+import { checkGit } from '../store.js';
 import { computeGraph, graphColor } from '../git-graph.js';
 
 const props = defineProps({ project: { type: Object, required: true } });
@@ -22,11 +23,18 @@ function openMenu(e, c) {
 function closeMenu() { menu.value = null; }
 function copyHash(c) { window.pilot.copyText(c.hash); toast('已复制完整 hash', 'ok'); closeMenu(); }
 function copySubject(c) { window.pilot.copyText(c.subject); toast('已复制提交主题', 'ok'); closeMenu(); }
-async function checkoutCommit(c) {
-  if (!confirm(`将仓库切到该提交（detached HEAD）？\n${c.short} ${c.subject}`)) return closeMenu();
-  try { await window.pilot.git.checkout(props.project.path, c.hash); toast('已 checkout（detached）', 'ok'); }
-  catch (e) { toast('checkout 失败：' + (e.message || e), 'err'); }
+function checkoutCommit(c) {
   closeMenu();
+  confirmBox('Checkout 提交', `将仓库切到该提交（detached HEAD）？<br><small>${c.short} ${c.subject}</small>`, async () => {
+    try {
+      await window.pilot.git.checkout(props.project.path, c.hash);
+      toast('已 checkout（detached）', 'ok');
+      // 闭环：刷新历史、引用标签和全局分支状态，让 HEAD/分支名立即反映切换结果
+      log.value = await window.pilot.git.log(props.project.path, 60);
+      try { refLabels.value = await window.pilot.git.commitBranches(props.project.path, 60) || {}; } catch (e) {}
+      checkGit(props.project, true);
+    } catch (e) { toast('checkout 失败：' + (e.message || e), 'err'); }
+  });
 }
 
 onMounted(async () => {

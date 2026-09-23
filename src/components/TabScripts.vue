@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { store, startScript, stopScript, saveProjects } from '../store.js';
 import { toast, openModal, confirmBox } from '../ui.js';
 import ScriptModal from '../modals/ScriptModal.vue';
+import Icon from './Icon.vue';
 
 const props = defineProps({ project: { type: Object, required: true } });
 
@@ -31,7 +32,7 @@ function del(s) {
 <template>
   <div class="panel-head">
     <h4>脚本（{{ project.scripts.length }}）</h4>
-    <button class="btn btn-primary" @click="add">＋ 添加脚本</button>
+    <button class="btn btn-primary" @click="add"><Icon name="Plus" :size="13" /> 添加脚本</button>
   </div>
   <div class="script-list">
     <div v-for="s in project.scripts" :key="s.id" class="script-row glass" :class="{ 'row-running': isRunning(s) }">
@@ -44,15 +45,15 @@ function del(s) {
         <code class="s-cmd">{{ s.cmd }}</code>
       </div>
       <div class="s-actions">
-        <button v-if="s.persistent && isRunning(s)" class="btn btn-danger-ghost" @click="stop(s)">■ 停止</button>
-        <button v-else class="btn btn-primary-ghost" @click="run(s)">▶ {{ s.persistent ? '启动' : '运行' }}</button>
-        <button class="icon-btn" title="查看输出" @click="showLog(s)">❐</button>
-        <button class="icon-btn" title="编辑" @click="edit(s)">✏️</button>
-        <button class="icon-btn" title="删除" @click="del(s)">🗑</button>
+        <button v-if="s.persistent && isRunning(s)" class="btn btn-danger-ghost" @click="stop(s)"><Icon name="Square" :size="11" /> 停止</button>
+        <button v-else class="btn btn-primary-ghost" @click="run(s)"><Icon name="Play" :size="11" /> {{ s.persistent ? '启动' : '运行' }}</button>
+        <button class="icon-btn" title="查看输出" @click="showLog(s)"><Icon name="Terminal" :size="14" /></button>
+        <button class="icon-btn" title="编辑" @click="edit(s)"><Icon name="Pencil" :size="14" /></button>
+        <button class="icon-btn" title="删除" @click="del(s)"><Icon name="Trash2" :size="14" /></button>
       </div>
     </div>
     <div v-if="!project.scripts.length" class="empty-box">
-      <div class="e-icon">⚡</div><div class="e-title">还没有脚本</div>
+      <div class="e-icon"><Icon name="Zap" :size="30" /></div><div class="e-title">还没有脚本</div>
       <div class="e-sub">把常用的 dev / build / start 命令保存为一键脚本。</div>
     </div>
   </div>

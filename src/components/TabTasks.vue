@@ -3,6 +3,7 @@ import { saveProjects, execAndLog } from '../store.js';
 import { toast, openModal, confirmBox, timeAgo } from '../ui.js';
 import TaskModal from '../modals/TaskModal.vue';
 import TaskLogModal from '../modals/TaskLogModal.vue';
+import Icon from './Icon.vue';
 
 const props = defineProps({ project: { type: Object, required: true } });
 
@@ -31,7 +32,7 @@ async function runNow(t) {
 <template>
   <div class="panel-head">
     <h4>自动任务（{{ (project.tasks || []).length }}）</h4>
-    <button class="btn btn-primary" @click="add">＋ 添加任务</button>
+    <button class="btn btn-primary" @click="add"><Icon name="Plus" :size="13" /> 添加任务</button>
   </div>
   <div class="script-list">
     <div v-for="t in project.tasks" :key="t.id" class="task-row glass" :class="{ 'row-off': !t.enabled }">
@@ -44,14 +45,14 @@ async function runNow(t) {
       </div>
       <div class="s-actions">
         <span class="c-time" title="上次运行">{{ t.lastRun ? timeAgo(t.lastRun) : '未运行' }}</span>
-        <button class="btn btn-primary-ghost" @click="runNow(t)">▶ 运行</button>
-        <button class="icon-btn" title="运行日志" @click="showLog(t)">❐</button>
-        <button class="icon-btn" @click="edit(t)">✏️</button>
-        <button class="icon-btn" @click="del(t)">🗑</button>
+        <button class="btn btn-primary-ghost" @click="runNow(t)"><Icon name="Play" :size="11" /> 运行</button>
+        <button class="icon-btn" title="运行日志" @click="showLog(t)"><Icon name="ScrollText" :size="14" /></button>
+        <button class="icon-btn" @click="edit(t)"><Icon name="Pencil" :size="14" /></button>
+        <button class="icon-btn" @click="del(t)"><Icon name="Trash2" :size="14" /></button>
       </div>
     </div>
     <div v-if="!(project.tasks || []).length" class="empty-box">
-      <div class="e-icon">⏱</div><div class="e-title">还没有自动任务</div>
+      <div class="e-icon"><Icon name="Timer" :size="30" /></div><div class="e-title">还没有自动任务</div>
       <div class="e-sub">支持：每天定时 / 固定间隔 / 打开插件时触发，自动在项目目录执行命令。</div>
     </div>
   </div>

@@ -2,6 +2,7 @@
 import { computed, ref, onMounted } from 'vue';
 import { store, saveProjects, checkGit, refreshAllGit, genCommitMessage } from '../store.js';
 import { toast, confirmBox } from '../ui.js';
+import Icon from './Icon.vue';
 
 const props = defineProps({ project: { type: Object, required: true } });
 
@@ -133,7 +134,7 @@ onMounted(initSel);
         <div class="subtabs tiny">
           <button class="subtab tiny-active">全部 {{ status?.dirty ?? 0 }}</button>
         </div>
-        <button class="icon-btn" title="刷新" @click="loadStatus">⟳</button>
+        <button class="icon-btn" title="刷新" @click="loadStatus"><Icon name="RefreshCw" :size="14" /></button>
       </div>
       <div class="file-groups">
         <template v-if="!loading && !error">
@@ -158,12 +159,12 @@ onMounted(initSel);
               <span class="ch-badge" :class="f.untracked ? 'b-u' : 'b-m'">{{ f.untracked ? 'U' : 'M' }}</span>
               <span class="ch-path" :title="f.path">{{ f.path }}</span>
               <span class="ch-ops">
-                <button title="暂存" @click.stop="stage([f])">＋</button>
-                <button title="丢弃" @click.stop="discard(f)">🗑</button>
+                <button title="暂存" @click.stop="stage([f])"><Icon name="Plus" :size="11" /></button>
+                <button title="丢弃" @click.stop="discard(f)"><Icon name="Undo2" :size="11" /></button>
               </span>
             </div>
           </div>
-          <p v-if="!status?.dirty" class="hint pad">🎉 工作区干净，没有未提交的变更。</p>
+          <p v-if="!status?.dirty" class="hint pad sync-ok"><Icon name="CircleCheck" :size="13" /> 工作区干净，没有未提交的变更。</p>
         </template>
         <p v-else-if="error" class="hint pad">{{ error }}</p>
         <p v-else class="hint pad">加载中…</p>
@@ -184,19 +185,19 @@ onMounted(initSel);
   </div>
 
   <div class="commit-bar glass">
-    <textarea v-model="store.commitMsg" class="input" placeholder="提交信息（可点击 ✦ 让 AI 生成）…"></textarea>
+    <textarea v-model="store.commitMsg" class="input" placeholder="提交信息（可点下方「AI 生成」）…"></textarea>
     <div class="commit-actions">
-      <button class="btn ai-btn" :disabled="!stagedCount || aiBusy" @click="aiMsg">✦ {{ aiBusy ? '生成中…' : 'AI 生成' }}</button>
+      <button class="btn ai-btn" :disabled="!stagedCount || aiBusy" @click="aiMsg"><Icon name="Sparkles" :size="12" /> {{ aiBusy ? '生成中…' : 'AI 生成' }}</button>
       <span class="hint">{{ stagedCount }} 个已暂存文件</span>
-      <button class="btn btn-primary" :disabled="!stagedCount || committing" @click="commit">✓ {{ committing ? '提交中…' : '提交' }}</button>
+      <button class="btn btn-primary" :disabled="!stagedCount || committing" @click="commit"><Icon name="Check" :size="13" /> {{ committing ? '提交中…' : '提交' }}</button>
     </div>
   </div>
 
   <div class="side-toolbar glass">
     <span class="branch-info">
-      {{ status?.branch ? '⑂ ' + status.branch : '' }}
+      <Icon v-if="status?.branch" name="GitBranch" :size="12" /> {{ status?.branch }}
       <span v-if="status?.ahead || status?.behind" class="ab">↑{{ status.ahead || 0 }} ↓{{ status.behind || 0 }}</span>
-      <span v-else-if="status" class="ok-text">✓ 与远程同步</span>
+      <span v-else-if="status" class="ok-text sync-ok"><Icon name="Check" :size="12" /> 与远程同步</span>
     </span>
     <span class="spacer"></span>
     <button class="btn btn-ghost" @click="gitOp('stage-all')">全部暂存</button>

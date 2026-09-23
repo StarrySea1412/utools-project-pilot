@@ -2,6 +2,7 @@
 import { computed, ref, onMounted } from 'vue';
 import { store, projectPorts } from '../store.js';
 import { projectIconStyle, timeAgo, shortPath } from '../ui.js';
+import Icon from './Icon.vue';
 
 const props = defineProps({ project: { type: Object, required: true } });
 const emit = defineEmits(['open', 'menu', 'run']);
@@ -13,6 +14,7 @@ const hasTasks = computed(() => (props.project.tasks || []).some((t) => t.enable
 
 const shownScripts = computed(() => props.project.scripts.slice(0, 3));
 const moreCount = computed(() => Math.max(0, props.project.scripts.length - 3));
+const compact = computed(() => store.settings.cardView === 'compact');
 
 function chipRunning(s) { return s.persistent && store.procHandles[s.id]?.running; }
 const openPath = (p) => window.pilot.openPath(p);
@@ -41,7 +43,7 @@ const svc = computed(() => {
            :data-id="project.id" tabindex="0"
            @click="emit('open', project.id)" @keydown.enter="emit('open', project.id)">
     <div class="card-top">
-      <div class="p-icon" :style="{ ...projectIconStyle(project.color), width: '42px', height: '42px', fontSize: '19px' }">
+      <div class="p-icon" :style="{ ...projectIconStyle(project.color), width: compact ? '32px' : '42px', height: compact ? '32px' : '42px', fontSize: compact ? '15px' : '19px' }">
         <img v-if="icon" :src="icon" alt="" class="p-icon-img">
         <template v-else>{{ (project.name || '?').charAt(0).toUpperCase() }}</template>
       </div>
@@ -49,7 +51,7 @@ const svc = computed(() => {
         <h3 :title="project.name">{{ project.name }}<span v-if="anyRunning" class="run-dot" title="服务运行中"></span></h3>
         <p class="p-path" :title="project.path">{{ shortPath(project.path) }}</p>
       </div>
-      <button class="icon-btn card-menu" @click.stop="emit('menu', project, $event)">⋯</button>
+      <button class="icon-btn card-menu" @click.stop="emit('menu', project, $event)"><Icon name="MoreHorizontal" :size="15" /></button>
     </div>
 
     <div class="card-git">
@@ -62,30 +64,30 @@ const svc = computed(() => {
         <span v-if="status.ahead" class="ab" title="领先远程">↑{{ status.ahead }}</span>
         <span v-if="status.behind" class="ab" title="落后远程">↓{{ status.behind }}</span>
       </span>
-      <span v-if="svc" class="mini-tag svc" :title="'服务运行中：' + svc.name">⚡ {{ svc.name }}<template v-if="svc.port"> :{{ svc.port }}</template></span>
+      <span v-if="svc" class="mini-tag svc" :title="'服务运行中：' + svc.name"><Icon name="Zap" :size="10" /> {{ svc.name }}<template v-if="svc.port"> :{{ svc.port }}</template></span>
       <span v-if="framework" class="mini-tag mono fw-tag">{{ framework }}</span>
     </div>
 
-    <div v-if="project.scripts.length" class="script-chips">
+    <div v-if="project.scripts.length && !compact" class="script-chips">
       <button v-for="s in shownScripts" :key="s.id" class="script-chip" :class="{ running: chipRunning(s) }"
               :title="s.cmd" @click.stop="emit('run', project, s)">
-        <i>{{ chipRunning(s) ? '■' : '▶' }}</i>{{ s.name }}
+        <i><Icon :name="chipRunning(s) ? 'Square' : 'Play'" :size="9" /></i>{{ s.name }}
       </button>
       <button v-if="moreCount" class="script-chip more" @click.stop="emit('open', project.id)">+{{ moreCount }}</button>
     </div>
 
-    <div v-if="(project.tags || []).length" class="card-tags">
+    <div v-if="(project.tags || []).length && !compact" class="card-tags">
       <span v-for="t in project.tags" :key="t" class="mini-tag">#{{ t }}</span>
     </div>
 
     <div class="card-foot">
       <span class="foot-time" :title="hasTasks ? '已启用自动任务' : ''">
-        {{ hasTasks ? '⏱ ' : '' }}{{ timeAgo(project.lastOpened || project.createdAt) }}
+        <Icon v-if="hasTasks" name="Timer" :size="11" /> {{ timeAgo(project.lastOpened || project.createdAt) }}
       </span>
       <div class="card-actions">
-        <button class="icon-btn" title="打开文件夹" @click.stop="openPath(project.path)">▸</button>
-        <button class="icon-btn" title="打开终端" @click.stop="openTerminal(project.path)">⌨</button>
-        <button class="icon-btn" title="进入管理" @click.stop="emit('open', project.id)">↗</button>
+        <button class="icon-btn" title="打开文件夹" @click.stop="openPath(project.path)"><Icon name="FolderOpen" :size="14" /></button>
+        <button class="icon-btn" title="打开终端" @click.stop="openTerminal(project.path)"><Icon name="Terminal" :size="14" /></button>
+        <button class="icon-btn" title="进入管理" @click.stop="emit('open', project.id)"><Icon name="ArrowUpRight" :size="14" /></button>
       </div>
     </div>
   </article>

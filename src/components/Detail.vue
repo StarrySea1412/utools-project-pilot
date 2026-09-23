@@ -9,6 +9,7 @@ import TabNotes from './TabNotes.vue';
 import TabTasks from './TabTasks.vue';
 import TabFiles from './TabFiles.vue';
 import EditProjectModal from '../modals/EditProjectModal.vue';
+import Icon from './Icon.vue';
 
 const TABS = [
   ['overview', '概览'], ['scripts', '脚本'], ['git', 'Git'],
@@ -44,7 +45,7 @@ const openTerminal = (p) => window.pilot.openTerminal(p);
 <template>
   <template v-if="proj">
     <header class="topbar detail-bar glass-strong">
-      <button class="icon-btn" title="返回 (Esc)" @click="back">←</button>
+      <button class="icon-btn" title="返回 (Esc)" @click="back"><Icon name="ArrowLeft" :size="15" /></button>
       <div class="p-icon" :style="{ ...projectIconStyle(proj.color), width: '34px', height: '34px', fontSize: '15px' }">
         <img v-if="icon" :src="icon" alt="" class="p-icon-img">
         <template v-else>{{ (proj.name || '?').charAt(0).toUpperCase() }}</template>
@@ -55,10 +56,10 @@ const openTerminal = (p) => window.pilot.openTerminal(p);
       </div>
       <span v-if="framework" class="mini-tag mono fw-tag">{{ framework }}</span>
       <div class="top-actions">
-        <button class="icon-btn" title="打开文件夹" @click="openPath(proj.path)">▸</button>
-        <button class="icon-btn" title="打开终端" @click="openTerminal(proj.path)">⌨</button>
-        <button class="icon-btn" title="编辑项目" @click="openModal(EditProjectModal, { project: proj }, { title: '编辑项目' })">✏️</button>
-        <button class="icon-btn" title="移除项目" @click="confirmBox('移除项目', `确定移除「${proj.name}」吗？不会删除磁盘文件。`, () => { removeProject(proj.id); back(); })">🗑</button>
+        <button class="icon-btn" title="打开文件夹" @click="openPath(proj.path)"><Icon name="FolderOpen" :size="14" /></button>
+        <button class="icon-btn" title="打开终端" @click="openTerminal(proj.path)"><Icon name="Terminal" :size="14" /></button>
+        <button class="icon-btn" title="编辑项目" @click="openModal(EditProjectModal, { project: proj }, { title: '编辑项目' })"><Icon name="Pencil" :size="14" /></button>
+        <button class="icon-btn" title="移除项目" @click="confirmBox('移除项目', `确定移除「${proj.name}」吗？不会删除磁盘文件。`, () => { removeProject(proj.id); back(); })"><Icon name="Trash2" :size="14" /></button>
       </div>
     </header>
 

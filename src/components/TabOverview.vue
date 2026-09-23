@@ -2,6 +2,7 @@
 import { computed, ref, onMounted } from 'vue';
 import { store, startScript, stopScript, projectPorts, watchProc, checkGit } from '../store.js';
 import { toast, timeAgo, commitType } from '../ui.js';
+import Icon from './Icon.vue';
 
 const props = defineProps({ project: { type: Object, required: true } });
 
@@ -54,14 +55,14 @@ function toGit() { store.detailTab = 'git'; }
         <div class="stat"><b>{{ tasksOn }}/{{ (project.tasks || []).length }}</b><span>自动任务</span></div>
       </div>
       <div class="ov-actions">
-        <button class="btn btn-ghost" @click="openPath(project.path)">▸ 打开文件夹</button>
-        <button class="btn btn-ghost" @click="openTerminal(project.path)">⌨ 终端</button>
-        <button class="btn btn-ghost" @click="toGit">⑂ 查看 Git</button>
+        <button class="btn btn-ghost" @click="openPath(project.path)"><Icon name="FolderOpen" :size="13" /> 打开文件夹</button>
+        <button class="btn btn-ghost" @click="openTerminal(project.path)"><Icon name="Terminal" :size="13" /> 终端</button>
+        <button class="btn btn-ghost" @click="toGit"><Icon name="GitBranch" :size="13" /> 查看 Git</button>
       </div>
     </section>
 
     <section v-if="runningScripts.length" class="glass panel svc-panel">
-      <h4 class="panel-title">⚡ 服务
+      <h4 class="panel-title"><Icon name="Zap" :size="14" /> 服务
         <span v-if="portsOf.length" class="mini-tag svc mono" title="点击打开">{{ portsOf.map((p) => ':' + p.port).join(' ') }}</span>
       </h4>
       <div class="svc-rows">
@@ -72,7 +73,7 @@ function toGit() { store.detailTab = 'git'; }
             <span class="mono svc-cmd" :title="s.cmd">{{ s.cmd }}</span>
             <span class="spacer"></span>
             <span v-if="isRunning(s)" class="mini-tag svc">运行中</span>
-            <button class="btn sm" :class="isRunning(s) ? 'btn-danger' : 'btn-primary'" @click="toggle(s)">{{ isRunning(s) ? '■ 停止' : '▶ 启动' }}</button>
+            <button class="btn sm" :class="isRunning(s) ? 'btn-danger' : 'btn-primary'" @click="toggle(s)"><Icon :name="isRunning(s) ? 'Square' : 'Play'" :size="11" /> {{ isRunning(s) ? '停止' : '启动' }}</button>
           </div>
           <pre v-if="isRunning(s) && logOf(s)" class="svc-log">{{ logOf(s) }}</pre>
         </div>
@@ -96,7 +97,7 @@ function toGit() { store.detailTab = 'git'; }
       <h4 class="panel-title">脚本快捷入口</h4>
       <div v-if="project.scripts.length" class="script-chips big">
         <button v-for="s in project.scripts" :key="s.id" class="script-chip" @click="runScript(s)">
-          <i>▶</i>{{ s.name }}
+          <i><Icon name="Play" :size="9" /></i>{{ s.name }}
         </button>
       </div>
       <p v-else class="hint">还没有脚本，去「脚本」标签添加常用命令。</p>
@@ -106,7 +107,7 @@ function toGit() { store.detailTab = 'git'; }
       <h4 class="panel-title">最近自动任务</h4>
       <ul v-if="runningTaskLogs.length" class="task-log-mini">
         <li v-for="(l, i) in runningTaskLogs" :key="i">
-          <span :class="l.ok ? 'ok-text' : 'err-text'">{{ l.ok ? '✓' : '✕' }}</span>
+          <span :class="l.ok ? 'ok-text' : 'err-text'"><Icon :name="l.ok ? 'Check' : 'X'" :size="12" /></span>
           {{ l.task }} <span class="c-time">{{ timeAgo(l.time) }}</span>
         </li>
       </ul>

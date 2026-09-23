@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 import { store } from '../store.js';
+import Icon from './Icon.vue';
 import { openModal } from '../ui.js';
 import { topPorts, portText } from '../ports.js';
 import PortsModal from '../modals/PortsModal.vue';
@@ -73,7 +74,7 @@ const isMock = typeof window !== 'undefined' && !!window.utools?.isMock;
     </div>
     <span class="vdiv"></span>
     <button class="cell click" title="查看全部监听端口" @click="openModal(PortsModal, {}, { title: '监听中的端口' })">
-      <span class="port-ico">🔌</span>
+      <span class="port-ico"><Icon name="Plug" :size="15" /></span>
       <div class="cell-txt">
         <span class="cell-lab">监听端口 <b class="num accent">{{ ports.length }}</b></span>
         <span class="cell-val mono">{{ bizPorts.map(portText).join('　') || '—' }}</span>
@@ -81,6 +82,6 @@ const isMock = typeof window !== 'undefined' && !!window.utools?.isMock;
     </button>
     <span class="spacer"></span>
     <span v-if="isMock" class="mini-tag svc">演示数据</span>
-    <button class="icon-btn sm" title="折叠" @click="store.sysOpen = false">⌄</button>
+    <button class="icon-btn sm" title="折叠" @click="store.sysOpen = false"><Icon name="ChevronDown" :size="12" /></button>
   </div>
 </template>

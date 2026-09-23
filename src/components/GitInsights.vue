@@ -3,6 +3,7 @@ import { computed, ref, onMounted } from 'vue';
 import { store, analyzeHistory } from '../store.js';
 import { toast, openModal } from '../ui.js';
 import ModeModal from '../modals/ModeModal.vue';
+import Icon from './Icon.vue';
 
 const props = defineProps({ project: { type: Object, required: true } });
 
@@ -49,8 +50,8 @@ function editMode() {
           </button>
         </li>
       </ul>
-      <button class="btn btn-ghost full" @click="addMode">＋ 自定义模式</button>
-      <button class="btn btn-ghost full" @click="editMode">✏️ 编辑当前模式</button>
+      <button class="btn btn-ghost full" @click="addMode"><Icon name="Plus" :size="13" /> 自定义模式</button>
+      <button class="btn btn-ghost full" @click="editMode"><Icon name="Pencil" :size="13" /> 编辑当前模式</button>
     </section>
     <section class="glass panel insights-main">
       <div class="panel-head slim">
@@ -61,7 +62,7 @@ function editMode() {
             <option :value="50">最近 50 条</option>
             <option :value="100">最近 100 条</option>
           </select>
-          <button class="btn ai-btn" :disabled="busy" @click="run">✦ {{ busy ? '分析中…' : '开始分析' }}</button>
+          <button class="btn ai-btn" :disabled="busy" @click="run"><Icon name="Sparkles" :size="13" /> {{ busy ? '分析中…' : '开始分析' }}</button>
         </div>
       </div>
       <div class="insight-result">

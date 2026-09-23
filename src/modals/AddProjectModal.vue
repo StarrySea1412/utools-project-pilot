@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { addProject, refreshAllGit, saveProjects } from '../store.js';
 import { toast, closeModal } from '../ui.js';
+import Icon from '../components/Icon.vue';
 
 const picked = ref([]);
 const manual = ref('');
@@ -36,13 +37,13 @@ async function doAdd() {
 <template>
   <div class="modal-body-inner">
     <div class="add-row">
-      <button class="btn btn-primary" @click="pick">📁 选择文件夹…</button>
+      <button class="btn btn-primary" @click="pick"><Icon name="FolderOpen" :size="13" /> 选择文件夹…</button>
       <span class="hint">或手动输入路径</span>
     </div>
     <div class="picked-list">
       <div v-for="p in picked" :key="p" class="picked-item">
         <span :title="p">{{ p }}</span>
-        <button @click="rmPick(p)">✕</button>
+        <button @click="rmPick(p)"><Icon name="X" :size="11" /></button>
       </div>
     </div>
     <label class="field"><span class="f-label">项目路径</span>

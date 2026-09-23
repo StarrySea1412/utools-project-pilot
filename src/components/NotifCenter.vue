@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { store, markNotifRead, markAllNotifRead, clearNotifs } from '../store.js';
 import { timeAgo } from '../ui.js';
+import Icon from './Icon.vue';
 
 const emit = defineEmits(['open-detail']);
 const unread = computed(() => store.notifications.filter((n) => !n.read).length);
@@ -23,14 +24,14 @@ function open(n) {
     <div v-if="store.notifOpen" class="modal-mask open" @click.self="store.notifOpen = false">
       <div class="modal glass-strong notif-modal" role="dialog">
         <div class="modal-head">
-          <h3>🔔 通知中心</h3>
+          <h3><Icon name="Bell" :size="15" /> 通知中心</h3>
           <span class="spacer"></span>
           <button v-if="unread" class="btn btn-ghost sm" @click="markAllNotifRead()">全部已读</button>
-          <button class="icon-btn" @click="store.notifOpen = false">✕</button>
+          <button class="icon-btn" @click="store.notifOpen = false"><Icon name="X" :size="14" /></button>
         </div>
         <div class="modal-body-inner">
           <div v-for="n in store.notifications" :key="n.id" class="notif-row" :class="{ unread: !n.read }" @click="open(n)">
-            <span class="notif-ico">{{ n.icon }}</span>
+            <span class="notif-ico"><Icon :name="n.icon" :size="13" /></span>
             <span class="notif-text" :title="n.text">{{ n.text }}</span>
             <span v-if="n.projectId" class="mini-tag mono">{{ projName(n.projectId) }}</span>
             <span class="c-time">{{ timeAgo(n.time) }}</span>

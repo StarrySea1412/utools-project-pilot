@@ -2,6 +2,7 @@
 import { computed, ref, watch, onMounted } from 'vue';
 import { store } from '../store.js';
 import { toast, confirmBox, fmtSize, fmtDate } from '../ui.js';
+import Icon from './Icon.vue';
 
 const props = defineProps({ project: { type: Object, required: true } });
 
@@ -72,22 +73,22 @@ function enter(it) { store.fileCwd = cwd.value + '/' + it.name; }
       </template>
     </div>
     <div class="btn-row">
-      <button class="btn btn-ghost" @click="newFile">＋ 文件</button>
-      <button class="btn btn-ghost" @click="newDir">＋ 文件夹</button>
-      <button class="btn btn-ghost" @click="openPath(cwd)">▸ 系统打开</button>
+      <button class="btn btn-ghost" @click="newFile"><Icon name="Plus" :size="13" /> 文件</button>
+      <button class="btn btn-ghost" @click="newDir"><Icon name="Plus" :size="13" /> 文件夹</button>
+      <button class="btn btn-ghost" @click="openPath(cwd)"><Icon name="FolderOpen" :size="13" /> 系统打开</button>
     </div>
   </div>
   <div class="glass panel file-panel">
     <ul v-if="!loading && !error" class="file-list">
       <li v-for="it in items" :key="it.name" class="file-row" @click="it.dir ? enter(it) : preview(it)">
-        <span class="f-ico">{{ it.dir ? '📁' : '📄' }}</span>
+        <span class="f-ico"><Icon :name="it.dir ? 'Folder' : 'File'" :size="14" /></span>
         <span class="f-name" :title="it.name">{{ it.name }}</span>
         <span class="f-size">{{ it.dir ? '' : fmtSize(it.size) }}</span>
         <span class="f-actions">
-          <button v-if="!it.dir" title="预览/编辑" @click.stop="preview(it)">👁</button>
-          <button title="系统打开" @click.stop="open(it)">▸</button>
-          <button title="重命名" @click.stop="rename(it)">✏️</button>
-          <button title="删除" @click.stop="del(it)">🗑</button>
+          <button v-if="!it.dir" title="预览/编辑" @click.stop="preview(it)"><Icon name="Eye" :size="11" /></button>
+          <button title="系统打开" @click.stop="open(it)"><Icon name="FolderOpen" :size="12" /></button>
+          <button title="重命名" @click.stop="rename(it)"><Icon name="Pencil" :size="11" /></button>
+          <button title="删除" @click.stop="del(it)"><Icon name="Trash2" :size="11" /></button>
         </span>
       </li>
       <li v-if="!items.length" class="hint pad">空目录</li>
