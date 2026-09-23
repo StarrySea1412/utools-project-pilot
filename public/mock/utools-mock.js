@@ -133,6 +133,9 @@ index 3a2f1bc..8d91e2f 100644
     platform: 'mock', home: 'D:/demo', defaultCommitPrompt: '默认提交提示词（mock）',
     dbGet(key) { return db[key]?.value ?? null; },
     dbPut(key, value) { db[key] = { value }; },
+    // 导入导出 mock：导出记住最近文件名，导入回放导出时的 db 快照（含种子数据）
+    exportJson(name) { db['__lastExportName'] = { value: name }; db['__exportSnapshot'] = { value: JSON.stringify({ app: 'project-pilot', version: 1, exportedAt: new Date().toISOString(), 'pilot:projects': db['pilot:projects']?.value ?? null, 'pilot:settings': db['pilot:settings']?.value ?? null, 'pilot:todos': db['pilot:todos']?.value ?? null, 'pilot:notifications': db['pilot:notifications']?.value ?? null, 'pilot:aiAdvice': db['pilot:aiAdvice']?.value ?? null }) }; return 'D:/demo/' + name; },
+    async importJson() { return db['__exportSnapshot']?.value ?? null; },
     selectFolder() { return ['D:/demo/new-project']; },
     openPath() {}, showItemInFolder() {}, openInBrowser() {}, copyText() {},
     notify() {}, isDark() { return window.matchMedia('(prefers-color-scheme: dark)').matches; },

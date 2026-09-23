@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue';
-import { store, saveSettings } from '../store.js';
-import { toast, closeModal, openModal, applyTheme } from '../ui.js';
+import { store, saveSettings, exportAll, importAll } from '../store.js';
+import { toast, closeModal, openModal, confirmBox, applyTheme } from '../ui.js';
 import ModeModal from './ModeModal.vue';
 import Icon from '../components/Icon.vue';
 
@@ -43,6 +43,33 @@ async function test() {
 
 function addMode() { openModal(ModeModal, {}, { title: '自定义分析模式' }); }
 function editMode(m) { openModal(ModeModal, { mode: m }, { title: '编辑分析模式' }); }
+
+function doExport() {
+  const file = exportAll();
+  if (file) toast('已导出到 ' + file, 'ok');
+  else if (file === null && window.pilot?.exportJson) toast('已取消导出', 'warn');
+  else toast('当前环境不支持导出', 'err');
+}
+
+function doImport(mode) {
+  importAll(mode).then((r) => {
+    if (!r) return; // 用户取消
+    const parts = [];
+    if (r.projects) parts.push(`${mode === 'replace' ? '导入' : '新增'}项目 ${r.projects} 个`);
+    if (r.todos) parts.push(`待办 ${r.todos} 条`);
+    if (r.settings) parts.push('设置已覆盖');
+    toast('导入完成：' + (parts.join('，') || '无新内容'), 'ok');
+  }).catch((e) => toast('导入失败：' + (e.message || e), 'err'));
+}
+
+function onImportClick() {
+  // confirmBox 只有一个确定回调：合并导入走弹窗确认，覆盖导入用双弹窗分开
+  confirmBox('合并导入', '从备份文件导入，路径重复的项目会跳过，保留本地现有数据。继续？', () => doImport('merge'), { danger: false, okText: '选择文件' });
+}
+
+function onReplaceClick() {
+  confirmBox('全量覆盖导入', '用备份文件替换本地<b>全部</b>数据（项目/设置/待办），操作不可撤销。确定继续？', () => doImport('replace'));
+}
 </script>
 
 <template>
@@ -96,6 +123,16 @@ function editMode(m) { openModal(ModeModal, { mode: m }, { title: '编辑分析�
           <option value="dark">深色</option>
         </select>
       </div>
+    </section>
+
+    <section class="set-section">
+      <h4><Icon name="DatabaseBackup" :size="13" /> 数据备份</h4>
+      <div class="btn-row">
+        <button class="btn btn-ghost" @click="doExport"><Icon name="Download" :size="13" /> 导出全部数据</button>
+        <button class="btn btn-ghost" @click="onImportClick"><Icon name="Upload" :size="13" /> 合并导入</button>
+        <button class="btn btn-ghost" @click="onReplaceClick"><Icon name="FileWarning" :size="13" /> 全量覆盖导入</button>
+      </div>
+      <span class="f-hint">导出项目/设置/待办/通知为 JSON 文件；换机或重装时用导入恢复。uTools 数据无云同步，建议定期导出。</span>
     </section>
 
     <div class="btn-row" style="margin-top: 10px">

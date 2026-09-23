@@ -361,6 +361,31 @@ if (typeof window !== 'undefined') {
       });
       return r || [];
     },
+    // 数据导出：选保存位置并写 JSON（返回文件路径，取消返回 null）
+    exportJson(defaultName, text) {
+      if (typeof window.utools?.showSaveDialog !== 'function') return null;
+      const file = window.utools.showSaveDialog({
+        title: '导出数据',
+        defaultPath: defaultName,
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      });
+      if (!file) return null;
+      fsp.writeFile(file, text, 'utf8');
+      return file;
+    },
+    // 数据导入：选文件并读文本（取消返回 null）
+    importJson() {
+      if (typeof window.utools?.showOpenDialog !== 'function') return null;
+      const r = window.utools.showOpenDialog({
+        title: '导入数据',
+        buttonLabel: '导入',
+        properties: ['openFile'],
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      });
+      const file = r && r[0];
+      if (!file) return null;
+      return fsp.readFile(file, 'utf8');
+    },
     openPath(p) {
       const err = window.utools && window.utools.shellOpenPath(p);
       return err || null;
