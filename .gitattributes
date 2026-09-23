@@ -1,0 +1,13 @@
+# 统一换行符，消除 Git 在 Windows 上的 LF/CRLF 警告
+* text=auto eol=lf
+
+# Windows 批处理脚本保持 CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 二进制文件不做换行转换
+*.png binary
+*.jpg binary
+*.ico binary
+*.webp binary
