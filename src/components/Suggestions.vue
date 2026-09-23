@@ -1,15 +1,17 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { store, activeProject, saveProjects } from '../store.js';
-import { toast, openModal, applyTheme } from '../ui.js';
-import { buildSuggestions, aiSuggestions } from '../advisor.js';
+import { store, saveProjects, saveAiAdvice } from '../store.js';
+import { toast, timeAgo } from '../ui.js';
+import { buildSuggestions, aiAdvice } from '../advisor.js';
+import Icon from './Icon.vue';
 
 const emit = defineEmits(['open-detail']);
 
 const list = computed(() => buildSuggestions());
 const urgent = computed(() => list.value.filter((s) => s.level === 2).length);
+const advice = computed(() => store.aiAdvice);
+const hasAdvice = computed(() => !!advice.value.items?.length);
 const aiBusy = ref(false);
-const aiText = ref('');
 
 function act(s) {
   const a = s.action;
@@ -30,32 +32,48 @@ const actionText = (s) => s.actionText || (s.action?.type === 'git' ? '去处理
 
 async function runAi() {
   aiBusy.value = true;
-  aiText.value = '';
-  try { aiText.value = await aiSuggestions(); toast('AI 建议已生成', 'ai'); }
-  catch (e) { toast('AI 建议失败：' + e.message, 'err'); }
+  try {
+    const r = await aiAdvice();
+    if (!r.items.length) throw new Error('AI 没有给出有效建议，请重试');
+    saveAiAdvice(r);
+    toast('AI 建议已生成', 'ai');
+  } catch (e) { toast('AI 建议失败：' + e.message, 'err'); }
   aiBusy.value = false;
 }
 </script>
 
 <template>
-  <section class="sug-panel glass">
-    <div class="sug-head" @click="store.suggestionsOpen = !store.suggestionsOpen">
-      <h4 class="panel-title">🛰 领航建议</h4>
-      <span v-if="urgent" class="tab-badge">{{ urgent }} 项紧急</span>
-      <span v-else class="hint">{{ list.length }} 条</span>
+  <div class="sug-tools">
+    <span class="hint">{{ list.length }} 条建议<template v-if="urgent">，{{ urgent }} 项紧急</template></span>
+    <span class="spacer"></span>
+    <button class="btn ai-btn sm" :disabled="aiBusy" @click="runAi">
+      <Icon name="Sparkles" :size="12" /> {{ aiBusy ? '分析中…' : (hasAdvice ? '重新分析' : 'AI 今日建议') }}
+    </button>
+  </div>
+
+  <div v-for="s in list" :key="s.id" class="sug-row" :class="'lv' + s.level">
+    <span class="sug-ico" :class="'lv' + s.level"><Icon :name="s.icon" :size="12" /></span>
+    <span class="sug-text">{{ s.text }}</span>
+    <span v-if="s.sub" class="sug-sub">{{ s.sub }}</span>
+    <span class="spacer"></span>
+    <button v-if="s.action?.type !== 'none'" class="btn btn-ghost sm" @click="act(s)">{{ actionText(s) }}</button>
+  </div>
+  <p v-if="!list.length" class="hint" style="padding: 4px 10px">一切正常，没有需要处理的事。</p>
+
+  <!-- AI 今日建议：持久化的结构化清单，每条可执行 -->
+  <div v-if="hasAdvice" class="ai-block">
+    <div class="ai-head">
+      <Icon name="Sparkles" :size="12" />
+      <span class="ai-summary">{{ advice.summary || '今日建议' }}</span>
       <span class="spacer"></span>
-      <button class="btn ai-btn sm" :disabled="aiBusy" @click.stop="runAi">✦ {{ aiBusy ? '思考中…' : 'AI 今日建议' }}</button>
-      <button class="icon-btn" @click.stop="store.suggestionsOpen = !store.suggestionsOpen">{{ store.suggestionsOpen ? '⌄' : '⌃' }}</button>
+      <span class="hint">{{ timeAgo(advice.at) }}生成</span>
     </div>
-    <div v-if="store.suggestionsOpen" class="sug-list">
-      <div v-for="s in list" :key="s.id" class="sug-row" :class="'lv' + s.level">
-        <span class="sug-ico">{{ s.icon }}</span>
-        <span class="sug-text">{{ s.text }}</span>
-        <span v-if="s.sub" class="sug-sub">{{ s.sub }}</span>
-        <span class="spacer"></span>
-        <button v-if="s.action?.type !== 'none'" class="btn btn-ghost sm" @click="act(s)">{{ actionText(s) }}</button>
-      </div>
-      <div v-if="aiText" class="ai-result sug-ai"><pre>{{ aiText }}</pre></div>
+    <div v-for="s in advice.items" :key="s.id" class="sug-row ai-row" :class="'lv' + s.level">
+      <span class="sug-ico" :class="'lv' + s.level"><Icon :name="s.icon" :size="12" /></span>
+      <span class="sug-text">{{ s.text }}</span>
+      <span v-if="s.sub" class="sug-sub">{{ s.sub }}</span>
+      <span class="spacer"></span>
+      <button v-if="s.action?.type !== 'none'" class="btn btn-ghost sm" @click="act(s)">{{ actionText(s) }}</button>
     </div>
-  </section>
+  </div>
 </template>
