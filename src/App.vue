@@ -8,6 +8,7 @@ import ToastHost from './components/ToastHost.vue';
 import ModalHost from './components/ModalHost.vue';
 import NotifCenter from './components/NotifCenter.vue';
 import ConsoleDrawer from './components/ConsoleDrawer.vue';
+import Icon from './components/Icon.vue';
 
 function init() {
   if (new URLSearchParams(location.search).has('flat')) {
@@ -83,13 +84,13 @@ function openDetail(id) {
        @dragover.prevent="store.dropActive = true"
        @drop="onDrop">
     <div v-if="store.dropActive" class="drop-mask" @dragleave="store.dropActive = false">
-      <div class="drop-box glass-strong">📥 松手添加项目文件夹</div>
+      <div class="drop-box glass-strong"><Icon name="FolderInput" :size="22" /> 松手添加项目文件夹</div>
     </div>
     <Dashboard v-if="store.view === 'dashboard'" @open-detail="openDetail" @back-dashboard="backToDashboard" />
     <Detail v-else-if="store.view === 'detail'" />
     <ToastHost />
     <ModalHost />
     <ConsoleDrawer />
-    <NotifCenter />
+    <NotifCenter @open-detail="openDetail" />
   </div>
 </template>

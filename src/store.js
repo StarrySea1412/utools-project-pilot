@@ -3,6 +3,8 @@ import { reactive } from 'vue';
 
 const DEFAULT_SETTINGS = {
   theme: 'auto',
+  cardView: 'card',      // 仪表盘密度：card 卡片 / compact 紧凑 / list 列表
+  sort: 'recent',        // 仪表盘排序：recent 最近使用 / updated 最近更新 / dirty 变更最多 / tag 按标签 / name 名称
   ai: { baseUrl: 'https://api.openai.com/v1', apiKey: '', model: 'gpt-4o-mini' },
   commitPrompt: '',
   analysisModes: [
@@ -33,12 +35,13 @@ export const store = reactive({
   fileCwd: null,
   dropActive: false,
   sys: null,               // {mem, cpu, ports, portsLoading, portsError, memHistory, cpuHistory}
-  sysOpen: true,           // 系统状态面板折叠状态
-  suggestionsOpen: true,
-  todosOpen: true,         // 待办面板折叠状态
+  sysOpen: false,          // 系统状态面板折叠状态（默认折叠，让位给项目）
+  workOpen: false,         // 工作台面板（建议+待办）折叠状态
+  workTab: 'sug',          // 工作台面牌子页：sug 建议 / todo 待办
   notifOpen: false,        // 通知中心弹窗
   todos: [],               // 全局待办：{id, text, projectId?, q(0-3 四象限), done, createdAt, doneAt}
   notifications: [],       // 通知中心：{id, icon, text, time, read, projectId?}
+  aiAdvice: { date: '', at: 0, summary: '', items: [] },  // AI 今日建议（按天持久化）
 });
 
 export function load() {
@@ -47,10 +50,13 @@ export function load() {
     store.projects = (p && p.projects) || [];
     const s = window.pilot?.dbGet('pilot:settings');
     if (s && s.settings) store.settings = Object.assign(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), s.settings);
+    store.sort = store.settings.sort || 'recent';
     const t = window.pilot?.dbGet('pilot:todos');
     store.todos = (t && t.todos) || [];
     const n = window.pilot?.dbGet('pilot:notifications');
     store.notifications = (n && n.notifications) || [];
+    const a = window.pilot?.dbGet('pilot:aiAdvice');
+    if (a && a.date === today()) store.aiAdvice = a;
   } catch (e) { console.error(e); }
   const have = new Set(store.settings.analysisModes.map((m) => m.id));
   for (const m of DEFAULT_SETTINGS.analysisModes) if (!have.has(m.id)) store.settings.analysisModes.push(m);
@@ -91,13 +97,23 @@ export function clearDoneTodos() {
   saveTodos();
 }
 
+// ---------- AI 今日建议（按天持久化，一天一份） ----------
+export const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+export function saveAiAdvice(data) {
+  store.aiAdvice = { date: today(), at: Date.now(), ...data };
+  try { window.pilot?.dbPut('pilot:aiAdvice', store.aiAdvice); } catch (e) { console.error('保存 AI 建议失败', e); }
+}
+
 // ---------- 通知中心 ----------
 export function saveNotifications() {
   try { window.pilot?.dbPut('pilot:notifications', { notifications: store.notifications }); } catch (e) { console.error('保存通知失败', e); }
 }
 let notifSeq = 0;
 export function pushNotification(icon, text, { projectId = null, save = true, silent = false } = {}) {
-  const n = { id: 'nt_' + Date.now().toString(36) + (++notifSeq), icon: icon || '🔔', text, time: Date.now(), read: false, projectId };
+  const n = { id: 'nt_' + Date.now().toString(36) + (++notifSeq), icon: icon || 'Bell', text, time: Date.now(), read: false, projectId };
   store.notifications.unshift(n);
   store.notifications = store.notifications.slice(0, 50); // 上限 50 条
   if (save) saveNotifications();
@@ -249,7 +265,7 @@ export async function execAndLog(proj, task) {
   saveProjects();
   if (!entry.ok) {
     const text = `任务「${task.name}」执行失败（${proj.name}）`;
-    pushNotification('⚠️', text, { projectId: proj.id });
+      pushNotification('TriangleAlert', text, { projectId: proj.id });
   }
   return entry;
 }
@@ -281,6 +297,11 @@ export async function checkGit(proj, force = false) {
   try {
     cache.status = await window.pilot.git.status(proj.path);
     cache.notRepo = false; cache.error = null;
+    // 顺带取最后一次提交时间，供「最近更新」排序
+    try {
+      const last = await window.pilot.git.log(proj.path, 1);
+      cache.lastCommitAt = last?.[0]?.date ? new Date(last[0].date).getTime() : 0;
+    } catch (e) { /* 空仓库等情况忽略 */ }
   } catch (e) {
     const msg = String(e.message || e);
     cache.notRepo = /not a git repository/i.test(msg);

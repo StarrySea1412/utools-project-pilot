@@ -202,6 +202,17 @@ index 3a2f1bc..8d91e2f 100644
     async aiChat({ messages }) {
       await new Promise((r) => setTimeout(r, 900));
       const last = messages[messages.length - 1].content || '';
+      // AI 今日建议：返回结构化 JSON，走通解析/持久化/可执行动作全流程
+      if (/项目态势/.test(last)) {
+        return JSON.stringify({
+          summary: '先处理 axonhub 的 5 个未提交变更',
+          items: [
+            { text: '提交 axonhub 的 5 个未提交变更，避免丢失上下文', level: 2, project: 'axonhub', action: 'git' },
+            { text: 'ai-learning-platform 落后远程 2 个提交，先拉取再继续', level: 1, project: 'ai-learning-platform', action: 'git' },
+            { text: 'latex-notes 已 8 天未打开，考虑归档或补充备忘', level: 0, project: 'latex-notes', action: 'detail' },
+          ],
+        });
+      }
       if (/commit|提交/.test(last) && /diff/.test(last.toLowerCase())) return 'feat(git): 集成 AI 生成提交信息并优化变更视图';
       return `**阶段总结（最近提交）**\n\n1. 持续打磨 Git 视图：修复分支菜单宽度自适应，增加提交短哈希展示与筛选，提升提交历史的稳定性。\n2. 启动性能优化：针对插件冷启动首帧做了系统性的 perf(startup) 工作。\n3. 项目管理能力增强：新增项目关联跳转，改进 remote 管理菜单布局。\n\n**建议关注**：连续多次 git 相关改动集中在渲染层，建议补充 e2e 测试覆盖分支切换场景。`;
     },
