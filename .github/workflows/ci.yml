@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: 产物存在性检查
+        shell: bash
+        run: |
+          test -f dist/index.html
+          compgen -G 'dist/assets/*.js' > /dev/null || { echo "dist 缺少 JS 产物"; exit 1; }
+          compgen -G 'dist/assets/*.css' > /dev/null || { echo "dist 缺少 CSS 产物"; exit 1; }
+          echo "dist 产物检查通过"
