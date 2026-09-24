@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, onBeforeUnmount } from 'vue';
-import { store, load, startScheduler, startAutoRefresh, refreshAllGit, addProject, checkGit, startSysMonitor } from './store.js';
+import { store, load, startScheduler, startAutoRefresh, refreshAllGit, addProject, checkGit, startSysMonitor, patrolOnce } from './store.js';
 import { applyTheme, toast } from './ui.js';
 import Dashboard from './components/Dashboard.vue';
 import Detail from './components/Detail.vue';
@@ -16,7 +16,7 @@ function init() {
   }
   load();
   applyTheme();
-  refreshAllGit();
+  patrolOnce();      // 静默巡检：刷新 Git 态势 + 落后/失败主动进通知中心（内部自带去重节流）
   startAutoRefresh();
   startScheduler();
   startSysMonitor();

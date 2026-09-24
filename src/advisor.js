@@ -23,14 +23,16 @@ export function buildSuggestions() {
       out.push({
         id: `behind-${p.id}`, icon: 'ArrowDown', level: 1,
         text: `「${p.name}」落后远程 ${st.behind} 个提交`,
-        sub: '建议先拉取再继续开发，避免大冲突', projectId: p.id, action: { type: 'git' },
+        sub: '建议先拉取再继续开发，避免大冲突', projectId: p.id, action: { type: 'pull' },
+        actionText: '一键拉取',
       });
     }
     if (st?.ahead > 2) {
       out.push({
         id: `ahead-${p.id}`, icon: 'ArrowUp', level: 1,
         text: `「${p.name}」领先远程 ${st.ahead} 个提交`,
-        sub: '本地提交堆积较多，记得推送备份', projectId: p.id, action: { type: 'git' },
+        sub: '本地提交堆积较多，记得推送备份', projectId: p.id, action: { type: 'push' },
+        actionText: '一键推送',
       });
     }
     if (running.length) {

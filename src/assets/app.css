@@ -866,3 +866,10 @@ body {
 .ac-files { list-style: none; display: flex; flex-direction: column; gap: 3px; }
 .ac-files li { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .ac-path { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- AI 周报 ---------- */
+.weekly { gap: 8px; }
+.wk-head { display: flex; align-items: center; gap: 10px; }
+.wk-head .spacer { flex: 1; }
+.wk-stats { display: flex; flex-wrap: wrap; gap: 6px; }
+.wk-report { white-space: pre-wrap; font-size: 12px; line-height: 1.7; color: var(--text-1); background: var(--chip-bg); border: 1px solid var(--stroke-soft); border-radius: 10px; padding: 12px 14px; max-height: 320px; overflow-y: auto; }

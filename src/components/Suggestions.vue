@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue';
-import { store, saveProjects, saveAiAdvice } from '../store.js';
-import { toast, timeAgo } from '../ui.js';
+import { store, saveProjects, saveAiAdvice, checkGit, refreshAllGit } from '../store.js';
+import { toast, timeAgo, confirmBox } from '../ui.js';
 import { buildSuggestions, aiAdvice } from '../advisor.js';
 import Icon from './Icon.vue';
 
@@ -13,9 +13,35 @@ const advice = computed(() => store.aiAdvice);
 const hasAdvice = computed(() => !!advice.value.items?.length);
 const aiBusy = ref(false);
 
+// 执行中的一键操作 id 集合（按钮转圈、防连点）
+const busyIds = ref(new Set());
+const isBusy = (s) => busyIds.value.has(s.id);
+
+// 建议动作直达：pull/push 直接执行 git 操作，完成后刷新态势（建议随之消失）
+async function runGitAction(s, op) {
+  const proj = store.projects.find((p) => p.id === s.projectId);
+  if (!proj) return;
+  busyIds.value.add(s.id);
+  toast(op === 'pull' ? '拉取中…' : '推送中…', 'info');
+  try {
+    if (op === 'pull') await window.pilot.git.pull(proj.path);
+    else await window.pilot.git.push(proj.path);
+    toast(op === 'pull' ? `「${proj.name}」已拉取` : `「${proj.name}」已推送`, 'ok');
+    await Promise.all([checkGit(proj, true), import('../store.js').then((m) => m.refreshAllGit(true))]);
+  } catch (e) { toast('操作失败：' + (e.message || e), 'err'); }
+  busyIds.value.delete(s.id);
+}
+
 function act(s) {
   const a = s.action;
   if (!a || a.type === 'none') return;
+  if (a.type === 'pull' || a.type === 'push') {
+    const op = a.type;
+    confirmBox(op === 'pull' ? '拉取远程' : '推送到远程',
+      `对「${store.projects.find((p) => p.id === s.projectId)?.name || ''}」执行 ${op === 'pull' ? 'git pull（不使用 rebase）' : 'git push'}？`,
+      () => runGitAction(s, op), { danger: op === 'push', okText: op === 'pull' ? '拉取' : '推送' });
+    return;
+  }
   if (a.type === 'git' || a.type === 'tasks' || a.type === 'detail') {
     store.activeProjectId = s.projectId;
     store.view = 'detail';
@@ -56,7 +82,7 @@ async function runAi() {
     <span class="sug-text">{{ s.text }}</span>
     <span v-if="s.sub" class="sug-sub">{{ s.sub }}</span>
     <span class="spacer"></span>
-    <button v-if="s.action?.type !== 'none'" class="btn btn-ghost sm" @click="act(s)">{{ actionText(s) }}</button>
+    <button v-if="s.action?.type !== 'none'" class="btn btn-ghost sm" :disabled="isBusy(s)" @click="act(s)">{{ isBusy(s) ? '执行中…' : actionText(s) }}</button>
   </div>
   <p v-if="!list.length" class="hint" style="padding: 4px 10px">一切正常，没有需要处理的事。</p>
 
@@ -73,7 +99,7 @@ async function runAi() {
       <span class="sug-text">{{ s.text }}</span>
       <span v-if="s.sub" class="sug-sub">{{ s.sub }}</span>
       <span class="spacer"></span>
-      <button v-if="s.action?.type !== 'none'" class="btn btn-ghost sm" @click="act(s)">{{ actionText(s) }}</button>
+      <button v-if="s.action?.type !== 'none'" class="btn btn-ghost sm" :disabled="isBusy(s)" @click="act(s)">{{ isBusy(s) ? '执行中…' : actionText(s) }}</button>
     </div>
   </div>
 </template>

@@ -387,6 +387,45 @@ export function startAutoRefresh() {
   }, 90000);
 }
 
+// ---------- 静默巡检：打开插件时跑一轮，落后远程/任务失败主动进通知中心 ----------
+const patrolState = { done: false, notifiedAt: {} }; // notifiedAt: key(通知去重) -> ts
+
+export async function patrolOnce(force = false) {
+  if (patrolState.done && !force) return;
+  patrolState.done = true;
+  try { await refreshAllGit(force); } catch (e) { return; }
+  const now = Date.now();
+  for (const proj of store.projects) {
+    const st = store.gitCache[proj.id]?.status;
+    if (!st) continue;
+    // 落后远程：同一项目一小时只提醒一次
+    if (st.behind > 0) {
+      const key = `behind:${proj.id}`;
+      if (now - (patrolState.notifiedAt[key] || 0) > 3600e3) {
+        patrolState.notifiedAt[key] = now;
+        pushNotification('ArrowDown', `「${proj.name}」落后远程 ${st.behind} 个提交，建议先拉取`, { projectId: proj.id });
+      }
+    }
+    if (st.ahead > 5) {
+      const key = `ahead:${proj.id}`;
+      if (now - (patrolState.notifiedAt[key] || 0) > 3600e3) {
+        patrolState.notifiedAt[key] = now;
+        pushNotification('ArrowUp', `「${proj.name}」本地领先 ${st.ahead} 个提交未推送`, { projectId: proj.id });
+      }
+    }
+    // 任务失败（执行路径已有通知，这里兜底巡检一遍启动前的失败）
+    for (const t of proj.tasks || []) {
+      if (t.enabled && t.log?.[0] && !t.log[0].ok) {
+        const key = `taskfail:${t.id}`;
+        if (now - (patrolState.notifiedAt[key] || 0) > 3600e3) {
+          patrolState.notifiedAt[key] = now;
+          pushNotification('TriangleAlert', `任务「${t.name}」最近一次执行失败（${proj.name}）`, { projectId: proj.id });
+        }
+      }
+    }
+  }
+}
+
 // ---------- 系统监测 ----------
 export function startSysMonitor() {
   if (!window.pilot?.sys) return;

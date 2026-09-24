@@ -2,9 +2,11 @@
 import { computed, ref, watch } from 'vue';
 import { store } from '../store.js';
 import { buildSuggestions } from '../advisor.js';
+import { openModal } from '../ui.js';
 import Icon from './Icon.vue';
 import Suggestions from './Suggestions.vue';
 import TodoPanel from './TodoPanel.vue';
+import WeeklyReport from './WeeklyReport.vue';
 
 const emit = defineEmits(['open-detail']);
 
@@ -15,6 +17,10 @@ const openTodos = computed(() => store.todos.filter((t) => !t.done).length);
 function pick(tab) {
   store.workTab = tab;
   store.workOpen = true;
+}
+
+function openWeekly() {
+  openModal(WeeklyReport, {}, { title: 'AI 周报（全部项目 · 近 7 天）', wide: true });
 }
 
 // 有紧急建议时自动展开一次（本次会话内只打扰一回）
@@ -41,6 +47,9 @@ watch(urgent, (n) => {
         <button class="subtab" :class="{ 'subtab-active': store.workTab === 'todo' }" @click="pick('todo')">
           <Icon name="ListTodo" :size="12" /> 待办
           <span v-if="openTodos" class="tab-badge">{{ openTodos }}</span>
+        </button>
+        <button class="subtab" title="AI 周报" @click="openWeekly">
+          <Icon name="ScrollText" :size="12" /> 周报
         </button>
       </div>
       <span class="spacer"></span>

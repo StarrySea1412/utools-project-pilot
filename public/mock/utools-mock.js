@@ -228,6 +228,9 @@ index 3a2f1bc..8d91e2f 100644
         });
       }
       if (/commit|提交/.test(last) && /diff/.test(last.toLowerCase())) return 'feat(git): 集成 AI 生成提交信息并优化变更视图';
+      if (/周报/.test(messages[0]?.content || '')) {
+        return '**本周主题**：Git 工作台深度打磨与界面一致性提升。\n\n## axonhub\n- 完成分支管理弹窗与 stash 快捷操作\n- 修复切换分支后的状态回弹问题\n\n## ai-learning-platform\n- 图库页 UI 迭代，新增筛选能力\n\n**风险与建议**\n- 多项目并发刷新逻辑改动较多，建议观察一周内任务失败率。';
+      }
       return `**阶段总结（最近提交）**\n\n1. 持续打磨 Git 视图：修复分支菜单宽度自适应，增加提交短哈希展示与筛选，提升提交历史的稳定性。\n2. 启动性能优化：针对插件冷启动首帧做了系统性的 perf(startup) 工作。\n3. 项目管理能力增强：新增项目关联跳转，改进 remote 管理菜单布局。\n\n**建议关注**：连续多次 git 相关改动集中在渲染层，建议补充 e2e 测试覆盖分支切换场景。`;
     },
   };
