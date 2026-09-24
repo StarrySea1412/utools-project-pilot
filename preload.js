@@ -1,4 +1,4 @@
-// preload.js — 项目领航员 (ProjectPilot)
+// preload.js — Seewrok (Seewrok)
 // Node 桥接层：Git / 脚本进程 / 文件系统 / uTools DB / AI(OpenAI 兼容)
 const { execFile, spawn } = require('child_process');
 const fs = require('fs');

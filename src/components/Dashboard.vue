@@ -118,7 +118,7 @@ function runFromCard(proj, script) {
     <div class="brand">
       <div class="logo-mini"><Icon name="Plane" :size="16" /></div>
       <div class="brand-txt">
-        <div class="brand-line"><h1>项目领航员</h1></div>
+        <div class="brand-line"><h1>Seewrok</h1></div>
       </div>
     </div>
     <div class="top-actions">

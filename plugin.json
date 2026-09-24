@@ -1,5 +1,5 @@
 {
-  "pluginName": "项目领航员",
+  "pluginName": "Seewrok",
   "version": "1.4.0",
   "description": "快捷管理本地项目与服务：脚本启动、Git 变更与历史、备忘、自动任务、AI 提交信息与提交记录分析。iOS 磨砂玻璃质感。",
   "author": "starry-sea-1412",
@@ -17,7 +17,7 @@
       "cmds": [
         "项目管理",
         "项目管家",
-        "项目领航员",
+        "Seewrok",
         "pilot",
         "pm"
       ]

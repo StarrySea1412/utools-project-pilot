@@ -76,7 +76,7 @@ describe('importAll', () => {
 
   it('非本应用备份文件被拒绝', async () => {
     lastExport = { name: 'f.json', text: JSON.stringify({ hello: 1 }) };
-    await expect(importAll('merge')).rejects.toThrow('不是项目领航员的备份文件');
+    await expect(importAll('merge')).rejects.toThrow('不是Seewrok的备份文件');
   });
 
   it('坏 JSON 被拒绝且不破坏现有状态', async () => {

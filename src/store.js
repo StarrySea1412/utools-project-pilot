@@ -161,7 +161,7 @@ export async function importAll(mode = 'merge') {
   if (!raw) return null;
   let data;
   try { data = JSON.parse(raw); } catch (e) { throw new Error('文件不是有效的 JSON'); }
-  if (!data || data.app !== 'project-pilot') throw new Error('不是项目领航员的备份文件');
+  if (!data || data.app !== 'project-pilot') throw new Error('不是Seewrok的备份文件');
 
   const imported = {};
   if (data['pilot:projects']?.projects) {
