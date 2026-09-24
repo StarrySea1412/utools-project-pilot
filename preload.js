@@ -128,6 +128,26 @@ async function gitHasRemote(cwd) {
   return r.stdout.trim().length > 0;
 }
 
+// ---------- 分支管理 / stash ----------
+async function gitCreateBranch(cwd, name, from) {
+  await git(cwd, ['checkout', '-b', name, ...(from ? [from] : [])]);
+  return true;
+}
+async function gitDeleteBranch(cwd, name, force = false) {
+  await git(cwd, ['branch', force ? '-D' : '-d', name]);
+  return true;
+}
+async function gitStashList(cwd) {
+  const out = await git(cwd, ['stash', 'list', '--pretty=format:%H%n%gd%n%gs']);
+  const rows = out.split('\n').filter(Boolean);
+  const list = [];
+  for (let i = 0; i + 2 < rows.length + 1; i += 3) {
+    if (!rows[i] || !rows[i + 1] || !rows[i + 2]) break;
+    list.push({ hash: rows[i], label: rows[i + 1], subject: rows[i + 2] });
+  }
+  return list;
+}
+
 // ---------- 进程/脚本 ----------
 const procs = new Map(); // id -> {proc, out:[], running, cmd, cwd, scriptName}
 let procSeq = 0;
@@ -441,6 +461,12 @@ if (typeof window !== 'undefined') {
         return map;
       },
       checkout: async (cwd, ref) => { await git(cwd, ['checkout', ref]); return true; },
+      createBranch: gitCreateBranch,
+      deleteBranch: gitDeleteBranch,
+      stashPush: async (cwd, msg) => { await git(cwd, ['stash', 'push', ...(msg ? ['-m', msg] : [])]); return true; },
+      stashPop: async (cwd, label) => { await git(cwd, ['stash', 'pop', label || 'stash@{0}']); return true; },
+      stashDrop: async (cwd, label) => { await git(cwd, ['stash', 'drop', label || 'stash@{0}']); return true; },
+      stashList: gitStashList,
       stage: (cwd, files) => git(cwd, ['add', '--', ...files]),
       unstage: (cwd, files) => git(cwd, ['reset', 'HEAD', '--', ...files]),
       discard: (cwd, files) => git(cwd, ['checkout', '--', ...files]),

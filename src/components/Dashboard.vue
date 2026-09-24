@@ -7,6 +7,7 @@ import ProjectCard from './ProjectCard.vue';
 import ProjectRow from './ProjectRow.vue';
 import SysBar from './SysBar.vue';
 import WorkPanel from './WorkPanel.vue';
+import AllChanges from './AllChanges.vue';
 import AddProjectModal from '../modals/AddProjectModal.vue';
 import EditProjectModal from '../modals/EditProjectModal.vue';
 import SettingsModal from '../modals/SettingsModal.vue';
@@ -68,6 +69,10 @@ async function refreshGit() {
   toast('正在刷新 Git 状态…', 'info');
   await refreshAllGit(true);
   toast('已刷新', 'ok');
+}
+
+function openAllChanges() {
+  openModal(AllChanges, {}, { title: '全部项目的未提交变更', wide: true });
 }
 
 function openProject(id) { emit('open-detail', id); }
@@ -155,6 +160,7 @@ function runFromCard(proj, script) {
         <option value="tag">按标签</option>
         <option value="name">名称</option>
       </select>
+      <button class="icon-btn" title="全部项目的未提交变更" @click="openAllChanges"><Icon name="GitBranch" :size="14" /></button>
       <button class="icon-btn" title="刷新全部 Git 状态" @click="refreshGit"><Icon name="RefreshCw" :size="14" /></button>
     </div>
   </div>

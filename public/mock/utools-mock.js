@@ -128,6 +128,8 @@ index 3a2f1bc..8d91e2f 100644
 
   // ---------- pilot stub ----------
   const projById = (path) => seedProjects.find((p) => p.path === path) || seedProjects[0];
+  let mockBranches = [];   // mock 新建分支累积
+  let mockStashes = [];    // mock stash 栈
 
   window.pilot = {
     platform: 'mock', home: 'D:/demo', defaultCommitPrompt: '默认提交提示词（mock）',
@@ -145,9 +147,18 @@ index 3a2f1bc..8d91e2f 100644
       async status(path) { return JSON.parse(JSON.stringify(fakeStatuses[projById(path).id] || fakeStatuses['prj_demo2'])); },
       async diffFile(_path, file, staged) { return file.untracked ? '+++ 新文件: ' + file.path + '\n+# 新增内容示例' : fakeDiff; },
       async log(_path, n = 60) { return fakeLog.slice(0, n); },
-      async branches(path) { return [{ current: true, name: fakeStatuses[projById(path).id]?.branch || 'main', upstream: 'origin/main' }, { current: false, name: 'develop', upstream: '' }]; },
+      async branches(path) {
+        const cur = fakeStatuses[projById(path).id]?.branch || 'main';
+        return [{ current: true, name: cur, upstream: 'origin/main' }, { current: false, name: 'develop', upstream: '' }, ...mockBranches.filter((b) => b.name !== cur)];
+      },
       async commitBranches() { return { '920132ab': ['main'], 'e84517af': ['main', 'feature/perf'], '93aa2677': ['v1.7.5'] }; },
       async checkout() {},
+      async createBranch(_cwd, name) { mockBranches.push({ current: false, name, upstream: '' }); },
+      async deleteBranch(_cwd, name) { mockBranches = mockBranches.filter((b) => b.name !== name); },
+      async stashPush() { mockStashes.unshift({ hash: 'ab12cd', label: 'stash@{0}', subject: 'WIP on main: 测试暂存' }); },
+      async stashPop() { mockStashes.shift(); },
+      async stashDrop() { mockStashes.shift(); },
+      async stashList() { return mockStashes.slice(); },
       async stage() {}, async unstage() {}, async discard() {}, async discardUntracked() {},
       async commit(_path, msg) { fakeLog.unshift({ hash: Math.random().toString(16).slice(2), short: Math.random().toString(16).slice(2, 9), author: 'you', date: new Date().toISOString(), subject: msg.split('\n')[0], body: '' }); return Math.random().toString(16).slice(2, 9); },
       async push() {}, async pull() {}, async fetch() {}, async hasRemote() { return true; },

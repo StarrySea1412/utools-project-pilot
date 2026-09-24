@@ -843,3 +843,26 @@ body {
 .notif-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
 .notif-badge { position: absolute; top: -3px; right: -3px; min-width: 15px; height: 15px; border-radius: 999px; background: var(--err); color: #fff; font-size: 9px; font-weight: 700; display: grid; place-items: center; padding: 0 3px; line-height: 1; }
 .top-actions .icon-btn { position: relative; }
+
+/* ---------- 分支管理弹窗 ---------- */
+.branch-toolbar { display: flex; align-items: center; gap: 10px; padding: 4px 0 8px; }
+.branch-list { list-style: none; display: flex; flex-direction: column; gap: 2px; max-height: 280px; overflow-y: auto; }
+.branch-list li { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 9px; font-size: 12.5px; color: var(--text-2); }
+.branch-list li:hover { background: var(--chip-bg); }
+.branch-list li.cur { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--text-1); font-weight: 600; }
+.branch-list .b-name { font-size: 12.5px; }
+.branch-list .spacer { flex: 1; }
+.branch-new { border-top: 1px solid var(--stroke-soft); margin-top: 8px; padding-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+.branch-new .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ---------- 跨项目聚合变更总览 ---------- */
+.all-changes { gap: 8px; }
+.ac-head { display: flex; align-items: center; gap: 10px; padding-bottom: 6px; }
+.ac-head .spacer, .ac-proj-head .spacer { flex: 1; }
+.ac-proj { border: 1px solid var(--stroke-soft); border-radius: 12px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.ac-proj-head { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text-1); }
+.ac-proj-head:hover .b-name { text-decoration: underline; }
+.ac-icon { width: 24px; height: 24px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--text-2); flex-shrink: 0; }
+.ac-files { list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.ac-files li { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.ac-path { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

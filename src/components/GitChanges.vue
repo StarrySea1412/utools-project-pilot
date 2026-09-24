@@ -1,8 +1,9 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
 import { store, saveProjects, checkGit, refreshAllGit, genCommitMessage } from '../store.js';
-import { toast, confirmBox } from '../ui.js';
+import { toast, confirmBox, openModal } from '../ui.js';
 import Icon from './Icon.vue';
+import BranchModal from '../modals/BranchModal.vue';
 
 const props = defineProps({ project: { type: Object, required: true } });
 
@@ -111,6 +112,43 @@ async function gitOp(op) {
   await loadStatus(); refreshAllGit(true);
 }
 
+// ---------- stash ----------
+const stashList = ref([]);
+async function loadStash() {
+  try { stashList.value = await window.pilot.git.stashList(props.project.path); }
+  catch (e) { stashList.value = []; }
+}
+async function stashPush() {
+  if (!status.value?.dirty) { toast('工作区干净，无需暂存', 'warn'); return; }
+  try {
+    await window.pilot.git.stashPush(props.project.path);
+    toast('已暂存到 stash', 'ok');
+    await Promise.all([loadStatus(), loadStash()]); refreshAllGit(true);
+  } catch (e) { toast('stash 失败：' + e.message, 'err'); }
+}
+function stashPop(label) {
+  confirmBox('恢复暂存', `把「${label}」弹回工作区？<br><small>pop 成功后该条 stash 会被删除；有冲突时会保留在 stash 里。</small>`, async () => {
+    try {
+      await window.pilot.git.stashPop(props.project.path, label);
+      toast('已恢复到工作区', 'ok');
+      await Promise.all([loadStatus(), loadStash()]); refreshAllGit(true);
+    } catch (e) { toast('恢复失败：' + e.message, 'err'); }
+  }, { danger: false });
+}
+function stashDrop(label) {
+  confirmBox('删除暂存', `删除「${label}」？该记录将不可恢复。`, async () => {
+    try {
+      await window.pilot.git.stashDrop(props.project.path, label);
+      toast('已删除', 'ok');
+      await loadStash();
+    } catch (e) { toast('删除失败：' + e.message, 'err'); }
+  });
+}
+
+function openBranchModal() {
+  openModal(BranchModal, { project: props.project }, { title: '分支管理 · ' + props.project.name });
+}
+
 const diffLines = computed(() => diff.value.split('\n').map((l) => ({
   text: l,
   cls: l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : l.startsWith('@@') ? 'hunk' : '',
@@ -123,6 +161,7 @@ async function initSel() {
   if (first) showDiff(first, !first.untracked && first.x !== '.');
   else diff.value = '';
   loading.value = false;
+  loadStash();
 }
 onMounted(initSel);
 </script>
@@ -195,11 +234,15 @@ onMounted(initSel);
 
   <div class="side-toolbar glass">
     <span class="branch-info">
-      <Icon v-if="status?.branch" name="GitBranch" :size="12" /> {{ status?.branch }}
+      <button class="btn btn-ghost sm" title="分支管理" @click="openBranchModal">
+        <Icon name="GitBranch" :size="12" /> {{ status?.branch || '—' }}
+      </button>
       <span v-if="status?.ahead || status?.behind" class="ab">↑{{ status.ahead || 0 }} ↓{{ status.behind || 0 }}</span>
       <span v-else-if="status" class="ok-text sync-ok"><Icon name="Check" :size="12" /> 与远程同步</span>
     </span>
     <span class="spacer"></span>
+    <button class="btn btn-ghost" title="把工作区改动存入 stash" @click="stashPush"><Icon name="Inbox" :size="13" /> stash</button>
+    <button v-if="stashList.length" class="btn btn-ghost" title="stash 列表" @click="stashPop(stashList[0].label)"><Icon name="Undo2" :size="13" /> 恢复最新 ({{ stashList.length }})</button>
     <button class="btn btn-ghost" @click="gitOp('stage-all')">全部暂存</button>
     <button class="btn btn-ghost" @click="gitOp('unstage-all')">取消全部暂存</button>
     <button class="btn btn-ghost" @click="gitOp('pull')">↓ 拉取</button>
