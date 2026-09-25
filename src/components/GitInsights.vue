@@ -36,6 +36,53 @@ function addMode() { openModal(ModeModal, {}, { title: '自定义分析模式' }
 function editMode() {
   if (curMode.value) openModal(ModeModal, { mode: curMode.value }, { title: '编辑分析模式' });
 }
+
+// ---------- 活跃度热力图（近 26 周，GitHub 风） ----------
+const WEEKS = 26;
+const heat = ref(null); // { cols: [[{count, title, lv}×7]×26], total, max }
+const heatLoading = ref(false);
+
+async function loadHeat() {
+  heatLoading.value = true;
+  try {
+    const log = await window.pilot.git.log(props.project.path, 400);
+    // 聚合到「天」：本地时区的 yyyy-mm-dd
+    const byDay = new Map();
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const start = new Date(today); start.setDate(start.getDate() - (WEEKS * 7 - 1));
+    for (const c of log) {
+      const d = new Date(c.date); d.setHours(0, 0, 0, 0);
+      if (d < start) continue;
+      const k = d.toISOString().slice(0, 10);
+      byDay.set(k, (byDay.get(k) || 0) + 1);
+    }
+    // 列 = 周（周日起点，对齐 GitHub），行 = 星期
+    const cols = [];
+    let cur = new Date(start);
+    // 对齐到周日
+    cur.setDate(cur.getDate() - cur.getDay());
+    while (cols.length < WEEKS + 1) {
+      const col = [];
+      for (let dow = 0; dow < 7; dow++) {
+        const d = new Date(cur); d.setDate(d.getDate() + dow);
+        if (d > today || d < start) { col.push({ count: -1, lv: 0, title: '' }); continue; }
+        const k = d.toISOString().slice(0, 10);
+        const count = byDay.get(k) || 0;
+        col.push({ count, lv: 0, title: `${d.toLocaleDateString('zh-CN')}：${count} 个提交` });
+      }
+      cols.push(col);
+      cur.setDate(cur.getDate() + 7);
+    }
+    const max = Math.max(1, ...[...byDay.values()]);
+    for (const col of cols) for (const cell of col) {
+      if (cell.count <= 0) continue;
+      cell.lv = cell.count >= max * 0.75 ? 4 : cell.count >= max * 0.5 ? 3 : cell.count >= max * 0.25 ? 2 : 1;
+    }
+    heat.value = { cols, total: [...byDay.values()].reduce((a, b) => a + b, 0), max };
+  } catch (e) { heat.value = null; }
+  heatLoading.value = false;
+}
+onMounted(loadHeat);
 </script>
 
 <template>
@@ -73,6 +120,23 @@ function editMode() {
           <div class="btn-row"><button class="btn btn-ghost" @click="copy">复制</button></div>
         </div>
         <p v-else class="hint pad">选择模式后点击「开始分析」，AI 将读取提交记录并输出结果。</p>
+      </div>
+
+      <!-- 活跃度热力图 -->
+      <div v-if="heat" class="heat-wrap">
+        <div class="heat-head">
+          <h4 class="panel-title"><Icon name="Zap" :size="13" /> 近 26 周活跃度</h4>
+          <span class="hint">共 {{ heat.total }} 个提交</span>
+          <span class="heat-legend">
+            少 <span class="heat-cell"></span><span class="heat-cell h1"></span><span class="heat-cell h2"></span><span class="heat-cell h3"></span><span class="heat-cell h4"></span> 多
+          </span>
+        </div>
+        <div class="heat-grid">
+          <div v-for="(col, ci) in heat.cols" :key="ci" class="heat-col">
+            <span v-for="(cell, ri) in col" :key="ri" class="heat-cell"
+                  :class="cell.count < 0 ? 'off' : 'h' + cell.lv" :title="cell.title"></span>
+          </div>
+        </div>
       </div>
     </section>
   </div>

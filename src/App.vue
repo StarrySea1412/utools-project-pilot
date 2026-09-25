@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onBeforeUnmount } from 'vue';
+import { onMounted, onBeforeUnmount, ref } from 'vue';
 import { store, load, startScheduler, startAutoRefresh, refreshAllGit, addProject, checkGit, startSysMonitor, patrolOnce } from './store.js';
 import { applyTheme, toast } from './ui.js';
 import Dashboard from './components/Dashboard.vue';
@@ -8,7 +8,10 @@ import ToastHost from './components/ToastHost.vue';
 import ModalHost from './components/ModalHost.vue';
 import NotifCenter from './components/NotifCenter.vue';
 import ConsoleDrawer from './components/ConsoleDrawer.vue';
+import CommandPalette from './components/CommandPalette.vue';
 import Icon from './components/Icon.vue';
+
+const cmdkOpen = ref(false);
 
 function init() {
   if (new URLSearchParams(location.search).has('flat')) {
@@ -45,12 +48,41 @@ function onDrop(e) {
 }
 
 function onKey(e) {
+  // Ctrl+K / Cmd+K 打开命令面板（输入框里也生效）
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+    e.preventDefault();
+    if (cmdkOpen.value) cmdkOpen.value = false;
+    else { closeModalAll(); cmdkOpen.value = true; }
+    return;
+  }
+  // 仪表盘列表 j/k 键盘导航（不在输入控件时）
+  if (store.view === 'dashboard' && !cmdkOpen.value && (e.key === 'j' || e.key === 'k')) {
+    if (e.target?.closest?.('input, textarea, select, [contenteditable]')) return;
+    e.preventDefault();
+    moveListSel(e.key === 'j' ? 1 : -1);
+    return;
+  }
   if (e.key !== 'Escape') return;
+  if (cmdkOpen.value) { cmdkOpen.value = false; return; }
   if (uiBusy()) return;
   if (store.consoleOpen) { store.consoleOpen = null; return; }
   if (store.view === 'detail') backToDashboard();
 }
+
+// j/k 导航：聚焦/移动仪表盘的项目卡片
+function moveListSel(step) {
+  const items = [...document.querySelectorAll('.proj-card, .proj-row')];
+  if (!items.length) return;
+  const cur = items.findIndex((el) => el === document.activeElement);
+  const next = cur < 0 ? 0 : Math.min(Math.max(cur + step, 0), items.length - 1);
+  items[next].focus();
+  items[next].scrollIntoView({ block: 'nearest' });
+}
 function uiBusy() { return !!document.querySelector('.modal-mask'); }
+function closeModalAll() {
+  if (uiBusy()) document.querySelector('.modal-mask')?.dispatchEvent(new MouseEvent('click', { bubbles: false }));
+  import('./ui.js').then((m) => { m.ui.modal = null; m.ui.confirm = null; });
+}
 
 function backToDashboard() {
   store.view = 'dashboard';
@@ -92,5 +124,6 @@ function openDetail(id) {
     <ModalHost />
     <ConsoleDrawer />
     <NotifCenter @open-detail="openDetail" />
+    <CommandPalette v-if="cmdkOpen" @open-detail="openDetail" @close="cmdkOpen = false" />
   </div>
 </template>

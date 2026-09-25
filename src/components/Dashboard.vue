@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
-import { store, saveSettings, removeProject, startScript, stopScript, refreshAllGit } from '../store.js';
+import { store, saveSettings, removeProject, startScript, stopScript, refreshAllGit, sortProjects, togglePin } from '../store.js';
 import { toast, openModal, confirmBox, applyTheme } from '../ui.js';
 import Icon from './Icon.vue';
 import ProjectCard from './ProjectCard.vue';
@@ -28,12 +28,7 @@ const visibleProjects = computed(() => {
     list = list.filter((p) => p.name.toLowerCase().includes(q) || p.path.toLowerCase().includes(q)
       || (p.tags || []).some((t) => t.toLowerCase().includes(q)));
   }
-  if (store.sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
-  else if (store.sort === 'dirty') list.sort((a, b) => (store.gitCache[b.id]?.status?.dirty || 0) - (store.gitCache[a.id]?.status?.dirty || 0));
-  else if (store.sort === 'updated') list.sort((a, b) => (store.gitCache[b.id]?.lastCommitAt || 0) - (store.gitCache[a.id]?.lastCommitAt || 0));
-  else if (store.sort === 'tag') list.sort((a, b) => ((a.tags || [])[0] || '￿').localeCompare((b.tags || [])[0] || '￿') || a.name.localeCompare(b.name));
-  else list.sort((a, b) => (b.lastOpened || b.createdAt || 0) - (a.lastOpened || a.createdAt || 0));
-  return list;
+  return sortProjects(list, store.gitCache, store.sort);
 });
 
 const unread = computed(() => store.notifications.filter((n) => !n.read).length);
@@ -82,6 +77,7 @@ function cardMenu(proj, ev) {
   const m = document.createElement('div');
   m.className = 'ctx-menu glass-strong';
   m.innerHTML = `
+    <button data-m="pin">${proj.pinned ? '取消置顶' : '置顶项目'}</button>
     <button data-m="edit">编辑项目</button>
     <button data-m="folder">打开文件夹</button>
     <button data-m="terminal">在终端打开</button>
@@ -97,6 +93,7 @@ function cardMenu(proj, ev) {
     const b = e.target.closest('[data-m]');
     if (!b) return;
     close();
+    if (b.dataset.m === 'pin') { togglePin(proj.id); toast(proj.pinned ? '已置顶' : '已取消置顶', 'ok'); }
     if (b.dataset.m === 'edit') openModal(EditProjectModal, { project: proj }, { title: '编辑项目' });
     if (b.dataset.m === 'folder') window.pilot.openPath(proj.path);
     if (b.dataset.m === 'terminal') window.pilot.openTerminal(proj.path);

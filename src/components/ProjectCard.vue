@@ -48,7 +48,7 @@ const svc = computed(() => {
         <template v-else>{{ (project.name || '?').charAt(0).toUpperCase() }}</template>
       </div>
       <div class="card-title">
-        <h3 :title="project.name">{{ project.name }}<span v-if="anyRunning" class="run-dot" title="服务运行中"></span></h3>
+        <h3 :title="project.name">{{ project.name }}<Icon v-if="project.pinned" name="Pin" :size="11" class="pin-mark" /><span v-if="anyRunning" class="run-dot" title="服务运行中"></span></h3>
         <p class="p-path" :title="project.path">{{ shortPath(project.path) }}</p>
       </div>
       <button class="icon-btn card-menu" @click.stop="emit('menu', project, $event)"><Icon name="MoreHorizontal" :size="15" /></button>

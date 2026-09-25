@@ -135,6 +135,17 @@ function onReplaceClick() {
       <span class="f-hint">导出项目/设置/待办/通知为 JSON 文件；换机或重装时用导入恢复。uTools 数据无云同步，建议定期导出。</span>
     </section>
 
+    <section class="set-section">
+      <h4><Icon name="Keyboard" :size="13" /> 快捷键</h4>
+      <ul class="kb-list">
+        <li><span class="kb-key">Ctrl K</span><span>命令面板（项目 / 脚本 / 导航 / 设置模糊搜索）</span></li>
+        <li><span class="kb-key">/</span><span>聚焦搜索框</span></li>
+        <li><span class="kb-key">J / K</span><span>列表中下移 / 上移项目</span></li>
+        <li><span class="kb-key">Enter</span><span>打开聚焦的项目</span></li>
+        <li><span class="kb-key">Esc</span><span>逐级返回（弹窗 → 控制台 → 仪表盘）</span></li>
+      </ul>
+    </section>
+
     <div class="btn-row" style="margin-top: 10px">
       <button class="btn btn-ghost" @click="closeModal()">取消</button>
       <button class="btn btn-primary" @click="save">保存</button>

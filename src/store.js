@@ -201,6 +201,26 @@ export async function importAll(mode = 'merge') {
 
 export const activeProject = () => store.projects.find((p) => p.id === store.activeProjectId) || null;
 
+// ---------- 排序 / 置顶 ----------
+// 纯函数：项目列表 + git 缓存 + 排序键 → 排序结果（置顶恒浮到最前，组内保持相对顺序），便于单测
+export function sortProjects(projects, gitCache, sortKey) {
+  const list = projects.slice();
+  if (sortKey === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
+  else if (sortKey === 'dirty') list.sort((a, b) => (gitCache[b.id]?.status?.dirty || 0) - (gitCache[a.id]?.status?.dirty || 0));
+  else if (sortKey === 'updated') list.sort((a, b) => (gitCache[b.id]?.lastCommitAt || 0) - (gitCache[a.id]?.lastCommitAt || 0));
+  else if (sortKey === 'tag') list.sort((a, b) => ((a.tags || [])[0] || '￿').localeCompare((b.tags || [])[0] || '￿') || a.name.localeCompare(b.name));
+  else list.sort((a, b) => (b.lastOpened || b.createdAt || 0) - (a.lastOpened || a.createdAt || 0));
+  return list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+}
+
+export function togglePin(id) {
+  const p = store.projects.find((x) => x.id === id);
+  if (!p) return;
+  p.pinned = !p.pinned;
+  saveProjects();
+  return p.pinned;
+}
+
 export function addProject(pathStr) {
   if (store.projects.some((p) => p.path.toLowerCase() === pathStr.toLowerCase())) return null;
   const proj = {

@@ -8,7 +8,7 @@ import {
   Trash2, Pencil, LayoutGrid, Grid3x3, List, Copy, Eraser, Info, TriangleAlert,
   Undo2, ArrowLeft, ArrowDown, ArrowUp, Moon, CircleCheck, CircleDot, Inbox, GitBranch,
   Bot, Folder, File, Eye, ListChecks, ScrollText, Wrench, ShieldAlert, CalendarClock,
-  DatabaseBackup, Download, Upload, FileWarning,
+  DatabaseBackup, Download, Upload, FileWarning, Pin, Keyboard,
 } from 'lucide-vue-next';
 
 const MAP = {
@@ -18,7 +18,7 @@ const MAP = {
   Trash2, Pencil, LayoutGrid, Grid3x3, List, Copy, Eraser, Info, TriangleAlert,
   Undo2, ArrowLeft, ArrowDown, ArrowUp, Moon, CircleCheck, CircleDot, Inbox, GitBranch,
   Bot, Folder, File, Eye, ListChecks, ScrollText, Wrench, ShieldAlert, CalendarClock,
-  DatabaseBackup, Download, Upload, FileWarning,
+  DatabaseBackup, Download, Upload, FileWarning, Pin, Keyboard,
 };
 
 const props = defineProps({
