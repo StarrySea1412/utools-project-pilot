@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
-import { store, saveSettings, removeProject, startScript, stopScript, refreshAllGit, sortProjects, togglePin } from '../store.js';
+import { store, saveSettings, removeProject, startScript, stopScript, refreshAllGit, sortProjects, togglePin, isProjectRunning } from '../store.js';
 import { toast, openModal, confirmBox, applyTheme } from '../ui.js';
 import Icon from './Icon.vue';
 import ProjectCard from './ProjectCard.vue';
@@ -20,9 +20,16 @@ const tags = computed(() => {
   return [...map.entries()].sort((a, b) => b[1] - a[1]);
 });
 
+// 「运行中」快捷筛选：当前有服务在跑的项目数
+const runningCount = computed(() => store.projects.filter((p) => isProjectRunning(p)).length);
+
 const visibleProjects = computed(() => {
   let list = store.projects.slice();
-  if (store.tagFilter !== '全部') list = list.filter((p) => (p.tags || []).includes(store.tagFilter));
+  if (store.tagFilter === '__running__') {
+    list = list.filter((p) => isProjectRunning(p));
+  } else if (store.tagFilter !== '全部') {
+    list = list.filter((p) => (p.tags || []).includes(store.tagFilter));
+  }
   if (store.search.trim()) {
     const q = store.search.trim().toLowerCase();
     list = list.filter((p) => p.name.toLowerCase().includes(q) || p.path.toLowerCase().includes(q)
@@ -136,6 +143,9 @@ function runFromCard(proj, script) {
       <button class="chip" :class="{ 'chip-active': store.tagFilter === '全部' }" @click="store.tagFilter = '全部'">
         全部 <b>{{ store.projects.length }}</b>
       </button>
+      <button class="chip chip-running" :class="{ 'chip-active': store.tagFilter === '__running__' }" @click="store.tagFilter = store.tagFilter === '__running__' ? '全部' : '__running__'">
+        <span class="run-dot" style="width: 6px; height: 6px;"></span> 运行中 <b>{{ runningCount }}</b>
+      </button>
       <button v-for="[t, n] in tags" :key="t" class="chip" :class="{ 'chip-active': store.tagFilter === t }"
               @click="store.tagFilter = store.tagFilter === t ? '全部' : t">
         {{ t }} <b>{{ n }}</b>
@@ -154,6 +164,7 @@ function runFromCard(proj, script) {
         <option value="recent">最近使用</option>
         <option value="updated">最近更新</option>
         <option value="dirty">变更最多</option>
+        <option value="running">运行中优先</option>
         <option value="tag">按标签</option>
         <option value="name">名称</option>
       </select>

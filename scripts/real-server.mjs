@@ -148,7 +148,7 @@ function startScript(cwd, script) {
   const id = `p${++procSeq}_${Date.now()}`;
   const { file, args } = shellArgs(script.cmd);
   const proc = spawn(file, args, { cwd, windowsHide: true, env: { ...process.env, FORCE_COLOR: '0' } });
-  const handle = { id, out: '', running: true, code: null, scriptName: script.name || script.cmd, startedAt: Date.now() };
+  const handle = { id, out: '', running: true, code: null, scriptName: script.name || script.cmd, scriptId: script.id, cwd, pid: proc.pid, startedAt: Date.now() };
   const push = (chunk) => {
     handle.out += chunk.toString();
     if (handle.out.length > MAX_BUF) handle.out = handle.out.slice(-MAX_BUF + 1024);
@@ -270,27 +270,193 @@ async function pidNameMap() {
   tasklistCache = { at: Date.now(), map };
   return map;
 }
+
+let procInfoCache = new Map(); // pid -> { at, name, commandLine, executablePath, ppid }
+
+async function queryProcessesWin(pids) {
+  const res = new Map();
+  if (!pids || !pids.length) return res;
+  const filter = pids.map((id) => `ProcessId = ${id}`).join(' OR ');
+  const psCmd = `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ([wmisearcher]"SELECT ProcessId,ParentProcessId,Name,CommandLine,ExecutablePath FROM Win32_Process WHERE ${filter}").Get() | Select-Object ProcessId,ParentProcessId,Name,CommandLine,ExecutablePath | ConvertTo-Json -Compress`;
+  const r = await new Promise((resolve) => {
+    execFile('powershell.exe', [
+      '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', psCmd,
+    ], { windowsHide: true, maxBuffer: 4 * 1024 * 1024, timeout: 8000 }, (err, stdout) => resolve(err ? null : stdout));
+  });
+  if (!r) return res;
+  try {
+    const parsed = JSON.parse(r.trim());
+    const list = Array.isArray(parsed) ? parsed : [parsed];
+    for (const item of list) {
+      if (!item || !item.ProcessId) continue;
+      res.set(item.ProcessId, {
+        pid: item.ProcessId,
+        ppid: item.ParentProcessId ?? null,
+        name: item.Name || '',
+        commandLine: item.CommandLine || '',
+        executablePath: item.ExecutablePath || '',
+      });
+    }
+  } catch (e) {}
+  return res;
+}
+
+async function queryProcessesUnix(pids) {
+  const res = new Map();
+  if (!pids || !pids.length) return res;
+  if (process.platform === 'linux') {
+    for (const pid of pids) {
+      try {
+        const cmdRaw = await fsp.readFile(`/proc/${pid}/cmdline`, 'utf8').catch(() => '');
+        const commandLine = cmdRaw.split('\0').filter(Boolean).join(' ');
+        const exe = await fsp.readlink(`/proc/${pid}/exe`).catch(() => '');
+        res.set(pid, { pid, ppid: null, name: path.basename(exe) || '', commandLine, executablePath: exe });
+      } catch (e) {}
+    }
+    return res;
+  }
+  const r = await new Promise((resolve) => {
+    execFile('ps', ['-p', pids.join(','), '-o', 'pid=,ppid=,comm=,command='], { timeout: 5000 }, (err, stdout) => resolve(err ? '' : stdout));
+  });
+  for (const line of (r || '').split('\n')) {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length >= 4) {
+      const pid = +parts[0];
+      const ppid = +parts[1];
+      const name = parts[2];
+      const commandLine = parts.slice(3).join(' ');
+      if (pid) res.set(pid, { pid, ppid, name, commandLine, executablePath: name });
+    }
+  }
+  return res;
+}
+
 async function sysPorts() {
   const r = await new Promise((resolve) => {
-    execFile('cmd.exe', ['/d', '/c', 'netstat', '-ano', '-p', 'tcp'], { windowsHide: true, maxBuffer: 8 * 1024 * 1024, timeout: 15000 }, (err, stdout) => resolve(err ? '' : stdout));
+    if (isWin) {
+      execFile('netstat.exe', ['-ano', '-p', 'tcp'], { windowsHide: true, maxBuffer: 8 * 1024 * 1024, timeout: 15000 },
+        (err, stdout) => {
+          if (!err && stdout) return resolve(stdout);
+          execFile('cmd.exe', ['/d', '/c', 'netstat', '-ano', '-p', 'tcp'], { windowsHide: true, maxBuffer: 8 * 1024 * 1024, timeout: 15000 },
+            (e2, out2) => resolve(e2 ? '' : out2));
+        });
+    } else {
+      execFile('lsof', ['-iTCP', '-sTCP:LISTEN', '-P', '-n'], { timeout: 15000 }, (err, stdout) => {
+        if (!err && stdout) return resolve(stdout);
+        execFile('ss', ['-lptn'], { timeout: 15000 }, (e2, out2) => resolve(e2 ? '' : out2));
+      });
+    }
   });
-  const names = await pidNameMap();
-  const ports = new Map();
-  for (const line of r.split('\n')) {
-    if (!/LISTENING/.test(line)) continue;
-    const parts = line.trim().split(/\s+/);
-    if (parts.length < 4) continue;
-    const pm = parts[1].match(/:(\d+)$/);
-    const pid = +parts[parts.length - 1];
-    if (!pm) continue;
-    const port = +pm[1];
-    if (!ports.has(port)) ports.set(port, { port, pids: new Set(), names: new Set() });
-    const rec = ports.get(port);
-    if (pid) rec.pids.add(pid);
-    const name = names.get(pid);
-    if (name) rec.names.add(name);
+
+  const rawPorts = new Map();
+  if (isWin) {
+    for (const line of r.split('\n')) {
+      if (!/LISTENING/.test(line)) continue;
+      const parts = line.trim().split(/\s+/);
+      if (parts.length < 4) continue;
+      const local = parts[1], pid = +parts[parts.length - 1];
+      const pm = local.match(/:(\d+)$/);
+      if (!pm) continue;
+      const port = +pm[1];
+      if (!rawPorts.has(port)) rawPorts.set(port, new Set());
+      if (pid) rawPorts.get(port).add(pid);
+    }
+  } else {
+    for (const line of r.split('\n')) {
+      const m = line.match(/^(\S+)\s+(\d+).*?:(\d+)\s+\(LISTEN\)/);
+      if (m) {
+        const pid = +m[2], port = +m[3];
+        if (!rawPorts.has(port)) rawPorts.set(port, new Set());
+        if (pid) rawPorts.get(port).add(pid);
+      }
+    }
   }
-  return [...ports.values()].map((p) => ({ port: p.port, pids: [...p.pids], names: [...p.names] })).sort((a, b) => a.port - b.port);
+
+  const allListeningPids = new Set();
+  for (const pids of rawPorts.values()) {
+    for (const pid of pids) {
+      if (pid > 4) allListeningPids.add(pid);
+    }
+  }
+
+  for (const cachedPid of procInfoCache.keys()) {
+    if (!allListeningPids.has(cachedPid)) procInfoCache.delete(cachedPid);
+  }
+
+  const missingPids = [...allListeningPids].filter((pid) => !procInfoCache.has(pid));
+  if (missingPids.length > 0) {
+    try {
+      const queried = isWin ? await queryProcessesWin(missingPids) : await queryProcessesUnix(missingPids);
+      for (const [pid, info] of queried) {
+        procInfoCache.set(pid, { at: Date.now(), ...info });
+      }
+    } catch (e) {}
+  }
+
+  const needNamePids = [...allListeningPids].filter((pid) => !procInfoCache.get(pid)?.name);
+  if (needNamePids.length > 0 && isWin) {
+    try {
+      const nameMap = await pidNameMap();
+      for (const pid of needNamePids) {
+        const n = nameMap.get(pid);
+        if (n) {
+          const cur = procInfoCache.get(pid) || { pid, ppid: null, commandLine: '', executablePath: '' };
+          cur.name = n;
+          procInfoCache.set(pid, cur);
+        }
+      }
+    } catch (e) {}
+  }
+
+  const activeInternal = [];
+  for (const rec of procs.values()) {
+    if (rec.handle?.running && rec.proc?.pid) {
+      activeInternal.push({
+        pid: rec.proc.pid,
+        scriptName: rec.handle.scriptName,
+        scriptId: rec.handle.scriptId,
+        cwd: rec.handle.cwd,
+      });
+    }
+  }
+
+  const result = [];
+  for (const [port, pidsSet] of rawPorts.entries()) {
+    const pids = [...pidsSet];
+    const processes = pids.map((pid) => procInfoCache.get(pid) || { pid, name: '', commandLine: '', executablePath: '', ppid: null });
+    const names = [...new Set(processes.map((p) => p.name).filter(Boolean))];
+
+    let isInternal = false;
+    let internalScriptName = null;
+    let internalCwd = null;
+
+    for (const intProc of activeInternal) {
+      const matchDirect = pids.includes(intProc.pid);
+      const matchParent = processes.some((pr) => pr.ppid === intProc.pid);
+      if (matchDirect || matchParent) {
+        isInternal = true;
+        internalScriptName = intProc.scriptName;
+        internalCwd = intProc.cwd;
+        break;
+      }
+    }
+
+    const primary = processes.find((p) => p.commandLine) || processes[0] || {};
+
+    result.push({
+      port,
+      pids,
+      names,
+      commandLine: primary.commandLine || '',
+      executablePath: primary.executablePath || '',
+      isInternal,
+      scriptName: internalScriptName,
+      cwd: internalCwd,
+      processes,
+    });
+  }
+
+  return result.sort((a, b) => a.port - b.port);
 }
 
 // ---------- DB（JSON 文件持久化） + 种子 ----------

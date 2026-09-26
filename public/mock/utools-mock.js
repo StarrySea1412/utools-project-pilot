@@ -194,14 +194,14 @@ index 3a2f1bc..8d91e2f 100644
       cpu() { return { pct: 0.16 + Math.random() * 0.12, cores: 16 }; },
       async ports() {
         return [
-          { port: 135, pids: [1234], names: ['svchost.exe'] },
-          { port: 445, pids: [1234], names: ['svchost.exe'] },
-          { port: 3000, pids: [8640], names: ['node.exe'] },
-          { port: 5173, pids: [9124], names: ['node.exe'] },
-          { port: 8000, pids: [14520], names: ['python.exe'] },
-          { port: 3306, pids: [6216], names: ['mysqld.exe'] },
-          { port: 5040, pids: [3812], names: ['svchost.exe'] },
-          { port: 7681, pids: [22004], names: ['Code.exe'] },
+          { port: 135, pids: [1234], names: ['svchost.exe'], commandLine: '', executablePath: 'C:/Windows/System32/svchost.exe', isInternal: false, processes: [{ pid: 1234, name: 'svchost.exe', commandLine: '', executablePath: 'C:/Windows/System32/svchost.exe', ppid: null }] },
+          { port: 445, pids: [1234], names: ['svchost.exe'], commandLine: '', executablePath: 'C:/Windows/System32/svchost.exe', isInternal: false, processes: [{ pid: 1234, name: 'svchost.exe', commandLine: '', executablePath: 'C:/Windows/System32/svchost.exe', ppid: null }] },
+          { port: 3000, pids: [8640], names: ['node.exe'], commandLine: 'node D:/project/axonhub/node_modules/next/dist/bin/next dev', executablePath: 'C:/Program Files/nodejs/node.exe', isInternal: false, processes: [{ pid: 8640, name: 'node.exe', commandLine: 'node D:/project/axonhub/node_modules/next/dist/bin/next dev', executablePath: 'C:/Program Files/nodejs/node.exe', ppid: null }] },
+          { port: 5173, pids: [9124], names: ['node.exe'], commandLine: 'node D:/project/utools-project-pilot/node_modules/vite/bin/vite.js', executablePath: 'C:/Program Files/nodejs/node.exe', isInternal: false, processes: [{ pid: 9124, name: 'node.exe', commandLine: 'node D:/project/utools-project-pilot/node_modules/vite/bin/vite.js', executablePath: 'C:/Program Files/nodejs/node.exe', ppid: null }] },
+          { port: 8000, pids: [14520], names: ['python.exe'], commandLine: 'python -m uvicorn app.main:app --port 8000', executablePath: 'D:/project/ai-learning-platform/.venv/Scripts/python.exe', isInternal: false, processes: [{ pid: 14520, name: 'python.exe', commandLine: 'python -m uvicorn app.main:app --port 8000', executablePath: 'D:/project/ai-learning-platform/.venv/Scripts/python.exe', ppid: null }] },
+          { port: 3306, pids: [6216], names: ['mysqld.exe'], commandLine: 'mysqld.exe', executablePath: 'C:/Program Files/MySQL/bin/mysqld.exe', isInternal: false, processes: [{ pid: 6216, name: 'mysqld.exe', commandLine: 'mysqld.exe', executablePath: 'C:/Program Files/MySQL/bin/mysqld.exe', ppid: null }] },
+          { port: 5040, pids: [3812], names: ['svchost.exe'], commandLine: '', executablePath: 'C:/Windows/System32/svchost.exe', isInternal: false, processes: [{ pid: 3812, name: 'svchost.exe', commandLine: '', executablePath: 'C:/Windows/System32/svchost.exe', ppid: null }] },
+          { port: 7681, pids: [22004], names: ['Code.exe'], commandLine: '', executablePath: 'C:/Users/user/AppData/Local/Programs/Microsoft VS Code/Code.exe', isInternal: false, processes: [{ pid: 22004, name: 'Code.exe', commandLine: '', executablePath: 'C:/Users/user/AppData/Local/Programs/Microsoft VS Code/Code.exe', ppid: null }] },
         ];
       },
     },

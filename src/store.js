@@ -1,5 +1,6 @@
 // store.js — Vue reactive 全局状态：项目、设置、Git 缓存、进程句柄、自动任务调度、AI
 import { reactive } from 'vue';
+import { detectServiceName, isHttpPort, portUrl, pathContains, normalizePath } from './ports.js';
 
 const DEFAULT_SETTINGS = {
   theme: 'auto',
@@ -208,7 +209,8 @@ export function sortProjects(projects, gitCache, sortKey) {
   if (sortKey === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
   else if (sortKey === 'dirty') list.sort((a, b) => (gitCache[b.id]?.status?.dirty || 0) - (gitCache[a.id]?.status?.dirty || 0));
   else if (sortKey === 'updated') list.sort((a, b) => (gitCache[b.id]?.lastCommitAt || 0) - (gitCache[a.id]?.lastCommitAt || 0));
-  else if (sortKey === 'tag') list.sort((a, b) => ((a.tags || [])[0] || '￿').localeCompare((b.tags || [])[0] || '￿') || a.name.localeCompare(b.name));
+  else if (sortKey === 'tag') list.sort((a, b) => ((a.tags || [])[0] || '\ufffd').localeCompare((b.tags || [])[0] || '\ufffd') || a.name.localeCompare(b.name));
+  else if (sortKey === 'running') list.sort((a, b) => (isProjectRunning(b) ? 1 : 0) - (isProjectRunning(a) ? 1 : 0));
   else list.sort((a, b) => (b.lastOpened || b.createdAt || 0) - (a.lastOpened || a.createdAt || 0));
   return list.sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
 }
@@ -476,17 +478,165 @@ export function startSysMonitor() {
   setInterval(pollSlow, 15000);
 }
 
-// 项目路径 → 运行中的相关端口（按进程名粗关联 node/python/java 等 + 已知脚本端口）
+// ---------- 服务与端口智能探测与项目归属 ----------
+export function matchProjectForPort(portRecord, projects = store.projects) {
+  if (!portRecord || !projects || !projects.length) return null;
+
+  // 1. 内部进程标记：若为 Seewrok 启动脚本记录的工作目录匹配
+  if (portRecord.isInternal && portRecord.cwd) {
+    const matched = projects.find((p) => normalizePath(p.path) === normalizePath(portRecord.cwd));
+    if (matched) return matched;
+  }
+
+  // 2. 检查 store.procHandles 中记录的内部脚本 PID 对应项目
+  for (const handle of Object.values(store.procHandles || {})) {
+    if (handle?.running && handle.projectId && handle.pid) {
+      if ((portRecord.pids || []).includes(handle.pid)) {
+        const matched = projects.find((p) => p.id === handle.projectId);
+        if (matched) return matched;
+      }
+    }
+  }
+
+  // 3. 命令行 / 可执行路径 / 探测 cwd 包含检测
+  const candidates = [];
+  for (const proj of projects) {
+    if (!proj.path) continue;
+    let matched = false;
+
+    if (pathContains(proj.path, portRecord.commandLine) ||
+        pathContains(proj.path, portRecord.executablePath) ||
+        (portRecord.cwd && pathContains(proj.path, portRecord.cwd))) {
+      matched = true;
+    }
+
+    if (!matched && Array.isArray(portRecord.processes)) {
+      for (const pr of portRecord.processes) {
+        if (pathContains(proj.path, pr.commandLine) || pathContains(proj.path, pr.executablePath)) {
+          matched = true;
+          break;
+        }
+      }
+    }
+
+    if (matched) candidates.push(proj);
+  }
+
+  if (candidates.length > 0) {
+    // 优先匹配路径最具体/最长者（如 monorepo 或子目录场景）
+    candidates.sort((a, b) => (b.path || '').length - (a.path || '').length);
+    return candidates[0];
+  }
+
+  // 4. 回退兼容（针对无完整命令行信息或测试桩环境）：
+  // 项目有运行中的持续脚本，且脚本运行时家族与端口进程名家族一致
+  // （如 npm run dev 实际跑在 node 上；npm/node 同家族，python/pip 同家族）
+  const FAMILY = {
+    npm: 'node', node: 'node', npx: 'node', vite: 'node', next: 'node', yarn: 'node', pnpm: 'node',
+    python: 'python', python3: 'python', pip: 'python', uvicorn: 'python', gunicorn: 'python', flask: 'python',
+    java: 'java', gradle: 'java', go: 'go', php: 'php', ruby: 'ruby',
+  };
+  for (const proj of projects) {
+    const runningScripts = (proj.scripts || []).filter((s) => s.persistent && store.procHandles?.[s.id]?.running);
+    if (!runningScripts.length) continue;
+    const families = new Set((portRecord.names || []).map((n) => FAMILY[String(n).toLowerCase().replace(/\.exe$/, '')]).filter(Boolean));
+    const matched = runningScripts.some((s) => {
+      const m = String(s.cmd || '').toLowerCase().match(/\b(npm|npx|yarn|pnpm|node|vite|next|python3?|pip|uvicorn|gunicorn|flask|java|gradle|go|php|ruby)\b/);
+      return m && families.has(FAMILY[m[1]]);
+    });
+    if (matched) return proj;
+  }
+
+  return null;
+}
+
+// 获取某个项目当前正在运行的所有服务（无论内部启动还是外部启动）
+export function projectServices(proj) {
+  if (!proj) return [];
+  const list = [];
+  const matchedPorts = new Set();
+
+  // 1. 内部持续脚本：正在运行即计入（端口随后由匹配补充进同一条目）
+  for (const s of proj.scripts || []) {
+    if (s.persistent && store.procHandles[s.id]?.running) {
+      matchedPorts.add(null);
+      list.push({
+        port: null,
+        service: s.name,
+        name: s.name,
+        pids: store.procHandles[s.id]?.pid ? [store.procHandles[s.id].pid] : [],
+        pid: store.procHandles[s.id]?.pid || null,
+        cmd: s.cmd || '',
+        isInternal: true,
+        url: null,
+      });
+    }
+  }
+
+  // 2. 从当前系统扫描到的监听端口中匹配属于本项目的服务
+  if (Array.isArray(store.sys?.ports)) {
+    for (const p of store.sys.ports) {
+      const matched = matchProjectForPort(p, store.projects);
+      if (matched && matched.id === proj.id) {
+        if (matchedPorts.has(p.port)) continue;
+        matchedPorts.add(p.port);
+        const serviceName = detectServiceName(p.commandLine, p.names, p.scriptName, p.port);
+        const internalEntry = list.find((item) => item.isInternal);
+        if (internalEntry && !internalEntry.port && p.isInternal) {
+          // 内部脚本已监听端口：合并到同一条目
+          internalEntry.port = p.port;
+          internalEntry.service = serviceName;
+          internalEntry.pids = p.pids || internalEntry.pids;
+          internalEntry.pid = (p.pids || [])[0] || internalEntry.pid;
+          internalEntry.url = portUrl(p.port);
+        } else {
+          list.push({
+            port: p.port,
+            service: serviceName,
+            name: p.scriptName || serviceName,
+            pids: p.pids || [],
+            pid: (p.pids || [])[0] || null,
+            cmd: p.commandLine || '',
+            isInternal: !!p.isInternal,
+            url: portUrl(p.port),
+          });
+        }
+      }
+    }
+  }
+
+  return list;
+}
+
+// 判断项目是否正在跑任何服务（内部脚本或外部服务）
+export function isProjectRunning(proj) {
+  if (!proj) return false;
+  if ((proj.scripts || []).some((s) => s.persistent && store.procHandles[s.id]?.running)) return true;
+  return projectServices(proj).length > 0;
+}
+
+// 项目路径 → 运行中的相关端口（精确定位属于该项目的监听端口）
 export function projectPorts(proj) {
-  if (!store.sys?.ports) return [];
-  const names = new Set((proj.scripts || []).flatMap((s) => {
-    const m = String(s.cmd).match(/\b(node|npm|python|python3|uvicorn|java|go|php|ruby)\b/i);
-    return m ? [m[1].toLowerCase()] : [];
-  }));
-  const pkgLike = /node|npm|vite|next|webpack/i;
-  return store.sys.ports.filter((p) => p.names.some((n) => {
-    const ln = n.toLowerCase();
-    if (names.size && [...names].some((x) => ln.includes(x))) return true;
-    return names.size === 0 && pkgLike.test(ln);
-  })).slice(0, 6);
+  if (!store.sys?.ports || !proj) return [];
+  const services = projectServices(proj);
+  const servicePorts = new Set(services.filter((s) => s.port).map((s) => s.port));
+  return store.sys.ports.filter((p) => servicePorts.has(p.port));
+}
+
+// 反查端口所属项目及服务信息
+export function portProject(portNumber) {
+  if (!store.sys?.ports || !store.projects) return null;
+  const p = store.sys.ports.find((x) => x.port === Number(portNumber));
+  if (!p) return null;
+  const proj = matchProjectForPort(p, store.projects);
+  if (!proj) return null;
+  const service = detectServiceName(p.commandLine, p.names, p.scriptName, p.port);
+  return {
+    project: proj,
+    service,
+    url: portUrl(p.port),
+    port: p.port,
+    pids: p.pids || [],
+    cmd: p.commandLine || '',
+  };
 }

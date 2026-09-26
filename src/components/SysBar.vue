@@ -1,9 +1,9 @@
 <script setup>
 import { computed } from 'vue';
-import { store } from '../store.js';
+import { store, portProject } from '../store.js';
 import Icon from './Icon.vue';
 import { openModal } from '../ui.js';
-import { topPorts, portText } from '../ports.js';
+import { topPorts, portText, detectServiceName } from '../ports.js';
 import PortsModal from '../modals/PortsModal.vue';
 
 const mem = computed(() => store.sys?.mem);
@@ -14,6 +14,20 @@ const cpuPct = computed(() => cpu.value?.pct == null ? null : Math.round(cpu.val
 const memUsed = computed(() => mem.value ? (mem.value.used / 1073741824).toFixed(1) : '—');
 const memTotal = computed(() => mem.value ? (mem.value.total / 1073741824).toFixed(1) : '—');
 const bizPorts = computed(() => topPorts(ports.value));
+// 端口摘要：优先展示服务名，并标注所属项目名缩写
+function portSummaryText(p) {
+  const info = portProject(p.port);
+  const svcName = info?.service || detectServiceName(p.commandLine, p.names, p.scriptName, p.port);
+  const projName = info?.project?.name || '';
+  const base = portText(p);
+  const svcPart = svcName && !base.includes(svcName) ? ` ${svcName}` : '';
+  const projPart = projName ? ` ·${short(projName)}` : '';
+  return base + svcPart + projPart;
+}
+function short(name) {
+  const n = String(name || '');
+  return n.length > 8 ? n.slice(0, 7) + '…' : n;
+}
 // 趋势波形（Glances 风）：store 每 3s 采样，最多 60 点
 const memHist = computed(() => store.sys?.memHistory || []);
 const cpuHist = computed(() => store.sys?.cpuHistory || []);
@@ -77,7 +91,7 @@ const isMock = typeof window !== 'undefined' && !!window.utools?.isMock;
       <span class="port-ico"><Icon name="Plug" :size="15" /></span>
       <div class="cell-txt">
         <span class="cell-lab">监听端口 <b class="num accent">{{ ports.length }}</b></span>
-        <span class="cell-val mono">{{ bizPorts.map(portText).join('　') || '—' }}</span>
+        <span class="cell-val mono">{{ bizPorts.map(portSummaryText).join('　') || '—' }}</span>
       </div>
     </button>
     <span class="spacer"></span>

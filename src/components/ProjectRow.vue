@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
-import { store, projectPorts } from '../store.js';
+import { store, projectServices, isProjectRunning } from '../store.js';
 import { projectIconStyle, timeAgo, shortPath } from '../ui.js';
 import Icon from './Icon.vue';
 
@@ -9,7 +9,7 @@ const emit = defineEmits(['open', 'menu', 'run']);
 
 const cache = computed(() => store.gitCache[props.project.id] || {});
 const status = computed(() => cache.value.status);
-const anyRunning = computed(() => props.project.scripts.some((s) => s.persistent && store.procHandles[s.id]?.running));
+const anyRunning = computed(() => isProjectRunning(props.project));
 
 const shownScripts = computed(() => props.project.scripts.slice(0, 2));
 function chipRunning(s) { return s.persistent && store.procHandles[s.id]?.running; }
@@ -23,12 +23,10 @@ onMounted(async () => {
     framework.value = id.framework || '';
   } catch (e) { /* 识别失败用字母占位 */ }
 });
-const svc = computed(() => {
-  const running = props.project.scripts.find((s) => chipRunning(s));
-  if (!running) return null;
-  const port = (projectPorts(props.project)[0] || {}).port;
-  return { name: running.name, port };
-});
+const services = computed(() => projectServices(props.project));
+function openSvc(s) {
+  if (s.url) window.pilot.openInBrowser(s.url);
+}
 
 const openPath = (p) => window.pilot.openPath(p);
 const openTerminal = (p) => window.pilot.openTerminal(p);
@@ -61,7 +59,13 @@ const openTerminal = (p) => window.pilot.openTerminal(p);
     </div>
 
     <div class="pr-svc">
-      <span v-if="svc" class="mini-tag svc" :title="'服务运行中：' + svc.name"><Icon name="Zap" :size="10" /> {{ svc.name }}<template v-if="svc.port"> :{{ svc.port }}</template></span>
+      <span v-for="s in services.slice(0, 2)" :key="s.port || s.name"
+            class="mini-tag svc" :class="{ 'clickable-svc': s.url }"
+            :title="s.url ? `点击在浏览器打开：${s.url}` : `服务运行中：${s.service || s.name}`"
+            @click.stop="openSvc(s)">
+        <Icon name="Zap" :size="10" /> {{ s.service || s.name }}<template v-if="s.port"> :{{ s.port }}</template>
+      </span>
+      <span v-if="services.length > 2" class="mini-tag svc-more" :title="services.slice(2).map((x) => (x.service || x.name) + (x.port ? ':' + x.port : '')).join(', ')">+{{ services.length - 2 }}</span>
       <button v-for="s in shownScripts" :key="s.id" class="script-chip" :class="{ running: chipRunning(s) }"
               :title="s.cmd" @click.stop="emit('run', project, s)">
         <i><Icon :name="chipRunning(s) ? 'Square' : 'Play'" :size="9" /></i>{{ s.name }}

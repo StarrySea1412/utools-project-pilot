@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
-import { store, startScript, stopScript, projectPorts, watchProc, checkGit } from '../store.js';
+import { store, startScript, stopScript, projectPorts, projectServices, watchProc, checkGit } from '../store.js';
 import { toast, timeAgo, commitType } from '../ui.js';
 import Icon from './Icon.vue';
 
@@ -32,7 +32,21 @@ const logOf = (s) => {
 };
 const portsOf = computed(() => projectPorts(props.project));
 function openPort(p) { window.pilot.openInBrowser(`http://localhost:${p.port}`); }
-const isHttp = (port) => [80, 443, 3000, 3001, 4000, 5000, 5173, 5174, 7001, 8000, 8001, 8008, 8080, 8081, 8090, 8888, 9000, 9528, 4200].includes(port);
+
+// ---- 外部检测到的项目服务（VSCode / 终端启动，非内部脚本） ----
+const externalServices = computed(() => {
+  const all = projectServices(props.project);
+  return all.filter((s) => !s.isInternal && s.port);
+});
+async function killExternal(s) {
+  if (!s.pid) return;
+  try {
+    const r = await window.pilot.killPid(s.pid);
+    if (r && r.ok === false) { toast(`结束失败：${r.error || '未知错误'}`, 'err'); return; }
+    toast(`已结束「${s.service || s.name}」进程`, 'ok');
+  } catch (e) { toast(`结束失败：${e.message || e}`, 'err'); }
+  try { store.sys.ports = await window.pilot.sys.ports(); } catch (e) { /* 保留旧列表 */ }
+}
 
 function runScript(script) {
   startScript(props.project, script);
@@ -61,9 +75,9 @@ function toGit() { store.detailTab = 'git'; }
       </div>
     </section>
 
-    <section v-if="runningScripts.length" class="glass panel svc-panel">
+    <section v-if="runningScripts.length || externalServices.length" class="glass panel svc-panel">
       <h4 class="panel-title"><Icon name="Zap" :size="14" /> 服务
-        <span v-if="portsOf.length" class="mini-tag svc mono" title="点击打开">{{ portsOf.map((p) => ':' + p.port).join(' ') }}</span>
+        <span v-if="portsOf.length" class="mini-tag svc mono clickable-svc" title="点击打开">{{ portsOf.map((p) => ':' + p.port).join(' ') }}</span>
       </h4>
       <div class="svc-rows">
         <div v-for="s in runningScripts" :key="s.id" class="svc-row" :class="{ on: isRunning(s) }">
@@ -77,8 +91,22 @@ function toGit() { store.detailTab = 'git'; }
           </div>
           <pre v-if="isRunning(s) && logOf(s)" class="svc-log">{{ logOf(s) }}</pre>
         </div>
+
+        <!-- 外部启动（VSCode / 终端）检测到的服务 -->
+        <div v-for="s in externalServices" :key="'ext-' + s.port" class="svc-row on">
+          <div class="svc-head">
+            <span class="svc-led on"></span>
+            <span class="svc-name">{{ s.service || s.name }}</span>
+            <span class="mono svc-cmd" :title="s.cmd || '外部终端启动的进程'">{{ s.cmd || '外部终端启动的进程' }}</span>
+            <span class="spacer"></span>
+            <span class="mini-tag svc" title="外部启动，由系统 netstat 实时检测">外部</span>
+            <span v-if="s.port" class="mini-tag mono svc">PID {{ s.pid || '—' }}</span>
+            <button v-if="s.url" class="btn sm btn-ghost" @click="window.pilot.openInBrowser(s.url)"><Icon name="ExternalLink" :size="11" /> 打开</button>
+            <button v-if="s.pid" class="btn sm btn-danger" @click="killExternal(s)"><Icon name="Square" :size="11" /> 结束</button>
+          </div>
+        </div>
       </div>
-      <p class="hint">端口来自本机 netstat 实时关联。</p>
+      <p class="hint">端口来自本机 netstat 实时关联；「外部」为在终端/IDE 里启动、由本插件自动探测关联的服务。</p>
     </section>
 
     <section class="glass panel">
