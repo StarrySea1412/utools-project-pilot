@@ -192,6 +192,7 @@ index 3a2f1bc..8d91e2f 100644
     sys: {
       memory() { const total = 34.4e9, used = 21.8e9 + Math.random() * 0.4e9; return { total, free: total - used, used, pct: used / total }; },
       cpu() { return { pct: 0.16 + Math.random() * 0.12, cores: 16 }; },
+      self() { return { pid: 1892, rss: 96 * 1024 * 1024, heapUsed: 38 * 1024 * 1024, heapTotal: 56 * 1024 * 1024, external: 4 * 1024 * 1024, uptime: 3612, totalMem: 34.4e9, pct: 96 * 1024 * 1024 / 34.4e9 }; },
       async ports() {
         return [
           { port: 135, pids: [1234], names: ['svchost.exe'], commandLine: '', executablePath: 'C:/Windows/System32/svchost.exe', isInternal: false, processes: [{ pid: 1234, name: 'svchost.exe', commandLine: '', executablePath: 'C:/Windows/System32/svchost.exe', ppid: null }] },

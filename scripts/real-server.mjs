@@ -254,6 +254,17 @@ function sysCpu() {
   lastCpus = now;
   return total > 0 ? { pct: 1 - idle / total, cores: now.length } : { pct: null, cores: now.length };
 }
+// 预览服务器自身（Node 进程）的资源占用
+function sysSelf() {
+  const mu = process.memoryUsage();
+  return {
+    pid: process.pid,
+    rss: mu.rss, heapUsed: mu.heapUsed, heapTotal: mu.heapTotal, external: mu.external,
+    uptime: process.uptime(),
+    totalMem: os.totalmem(),
+    pct: mu.rss / os.totalmem(),
+  };
+}
 let tasklistCache = { at: 0, map: new Map() };
 async function pidNameMap() {
   if (Date.now() - tasklistCache.at < 30000) return tasklistCache.map;
@@ -574,7 +585,7 @@ function rewriteIndex(html) {
 const apiHandlers = {
   'GET /api/meta': () => ({ platform: process.platform, home: os.homedir() }),
   'GET /api/db': () => dbCache,
-  'GET /api/sys/fast': () => ({ memory: sysMemory(), cpu: sysCpu() }),
+  'GET /api/sys/fast': () => ({ memory: sysMemory(), cpu: sysCpu(), self: sysSelf() }),
   'POST /api/sys/ports': () => sysPorts(),
   'POST /api/run-once': ({ cwd, cmd, timeoutMs }) => runOnce(cwd, cmd, timeoutMs),
   'POST /api/proc/start': ({ cwd, script }) => startScript(cwd, script || {}),

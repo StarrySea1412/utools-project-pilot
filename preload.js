@@ -306,6 +306,18 @@ function sysCpu() {
   return total > 0 ? { pct: 1 - idle / total, cores: now.length } : { pct: null, cores: now.length };
 }
 
+// 本插件自身（uTools 渲染宿主 Node 进程）的资源占用
+function sysSelf() {
+  const mu = process.memoryUsage();
+  return {
+    pid: process.pid,
+    rss: mu.rss, heapUsed: mu.heapUsed, heapTotal: mu.heapTotal, external: mu.external,
+    uptime: process.uptime(),
+    totalMem: os.totalmem(),
+    pct: mu.rss / os.totalmem(),
+  };
+}
+
 let tasklistCache = { at: 0, map: new Map() };
 async function pidNameMap() {
   if (Date.now() - tasklistCache.at < 30000) return tasklistCache.map;
@@ -715,7 +727,7 @@ if (typeof window !== 'undefined') {
       return { icon, framework };
     },
     // system monitor
-    sys: { memory: sysMemory, cpu: sysCpu, ports: sysPorts },
+    sys: { memory: sysMemory, cpu: sysCpu, ports: sysPorts, self: sysSelf },
     // misc
     defaultCommitPrompt: '你是资深工程师。根据我提供的 git 暂存区变更，生成一条简洁规范的中文 commit message，遵循 Conventional Commits（如 feat/fix/docs/refactor/perf/chore/test(scope): 描述）。只输出消息本身，不要任何解释、代码块或引号，50 字以内。',
   };

@@ -464,19 +464,22 @@ export async function patrolOnce(force = false) {
 // ---------- 系统监测 ----------
 export function startSysMonitor() {
   if (!window.pilot?.sys) return;
-  store.sys = { mem: null, cpu: null, ports: [], portsLoading: false, portsError: '', memHistory: [], cpuHistory: [] };
+  store.sys = { mem: null, cpu: null, self: null, ports: [], portsLoading: false, portsError: '', memHistory: [], cpuHistory: [], selfHistory: [] };
   const pollFast = async () => {
     try {
       const mem = window.pilot.sys.memory();
       const cpu = window.pilot.sys.cpu();
       store.sys.mem = mem;
       store.sys.cpu = cpu;
+      if (typeof window.pilot.sys.self === 'function') store.sys.self = window.pilot.sys.self();
       // 保留最近 60 个采样点用于走势图
       const push = (arr, v) => { arr.push(v); if (arr.length > 60) arr.shift(); };
       if (!Array.isArray(store.sys.memHistory)) store.sys.memHistory = [];
       if (!Array.isArray(store.sys.cpuHistory)) store.sys.cpuHistory = [];
+      if (!Array.isArray(store.sys.selfHistory)) store.sys.selfHistory = [];
       push(store.sys.memHistory, mem.pct);
       if (cpu.pct != null) push(store.sys.cpuHistory, cpu.pct);
+      if (store.sys.self?.rss) push(store.sys.selfHistory, store.sys.self.rss);
     } catch (e) { /* 忽略单次失败 */ }
   };
   const pollSlow = async () => {

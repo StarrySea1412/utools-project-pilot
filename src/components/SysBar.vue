@@ -8,11 +8,25 @@ import PortsModal from '../modals/PortsModal.vue';
 
 const mem = computed(() => store.sys?.mem);
 const cpu = computed(() => store.sys?.cpu);
+const self = computed(() => store.sys?.self);
 const ports = computed(() => store.sys?.ports || []);
 const memPct = computed(() => mem.value ? Math.round(mem.value.pct * 100) : null);
 const cpuPct = computed(() => cpu.value?.pct == null ? null : Math.round(cpu.value.pct * 100));
 const memUsed = computed(() => mem.value ? (mem.value.used / 1073741824).toFixed(1) : '—');
 const memTotal = computed(() => mem.value ? (mem.value.total / 1073741824).toFixed(1) : '—');
+// 本插件自身占用（RSS，MB 保留 1 位）
+const selfRss = computed(() => self.value?.rss ? (self.value.rss / 1048576).toFixed(1) : null);
+const selfHeap = computed(() => self.value?.heapUsed ? (self.value.heapUsed / 1048576).toFixed(1) : null);
+const selfUptime = computed(() => {
+  const s = self.value?.uptime;
+  if (!s && s !== 0) return '';
+  if (s < 60) return Math.round(s) + ' 秒';
+  if (s < 3600) return Math.round(s / 60) + ' 分';
+  return (s / 3600).toFixed(1) + ' 时';
+});
+const selfTitle = computed(() => self.value
+  ? `本插件进程占用\nRSS 内存：${selfRss.value} MB（堆 ${selfHeap.value} MB）\n已运行：${selfUptime.value}\nPID：${self.value.pid}`
+  : '本插件进程资源占用');
 const bizPorts = computed(() => topPorts(ports.value));
 // 端口摘要：优先展示服务名，并标注所属项目名缩写
 function portSummaryText(p) {
@@ -85,6 +99,14 @@ const isMock = typeof window !== 'undefined' && !!window.utools?.isMock;
       <svg v-if="spark(cpuHist)" class="trend" :class="cpuLevel" width="64" height="20" viewBox="0 0 64 20" preserveAspectRatio="none">
         <polyline :points="spark(cpuHist)" />
       </svg>
+    </div>
+    <span class="vdiv"></span>
+    <div class="cell self-cell" :title="selfTitle">
+      <span class="self-ico"><Icon name="Plane" :size="14" /></span>
+      <div class="cell-txt">
+        <span class="cell-lab">本插件</span>
+        <span class="cell-val num">{{ selfRss ? selfRss + ' MB' : '—' }}</span>
+      </div>
     </div>
     <span class="vdiv"></span>
     <button class="cell click" title="查看全部监听端口" @click="openModal(PortsModal, {}, { title: '监听中的端口' })">

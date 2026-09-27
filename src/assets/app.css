@@ -979,3 +979,7 @@ body {
 .ex-idea-text { font-size: 13px; font-weight: 600; line-height: 1.5; margin: 0; }
 .ex-idea-why { font-size: 11.5px; color: var(--text-3); line-height: 1.5; margin: 2px 0 0; }
 .ex-rule-panel .ex-rule-dims { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 6px; }
+
+/* SysBar：本插件自身占用单元 */
+.self-cell .self-ico { display: inline-flex; align-items: center; color: var(--accent-2); flex-shrink: 0; }
+.self-cell .cell-val { color: var(--accent-2); }

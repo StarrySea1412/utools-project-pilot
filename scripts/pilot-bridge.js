@@ -123,6 +123,7 @@
     sys: {
       memory() { return fast.memory; },
       cpu() { return fast.cpu; },
+      self() { return fast.self || null; },
       ports: () => post('/api/sys/ports'),
     },
 
