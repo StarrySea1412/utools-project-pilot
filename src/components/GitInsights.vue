@@ -4,6 +4,7 @@ import { store, analyzeHistory } from '../store.js';
 import { toast, openModal } from '../ui.js';
 import ModeModal from '../modals/ModeModal.vue';
 import Icon from './Icon.vue';
+import Select from './Select.vue';
 
 const props = defineProps({ project: { type: Object, required: true } });
 
@@ -104,11 +105,7 @@ onMounted(loadHeat);
       <div class="panel-head slim">
         <h4 class="panel-title">{{ curMode?.name || '分析' }}</h4>
         <div class="btn-row">
-          <select v-model.number="n" class="select">
-            <option :value="20">最近 20 条</option>
-            <option :value="50">最近 50 条</option>
-            <option :value="100">最近 100 条</option>
-          </select>
+          <Select v-model="n" :options="[{ value: 20, label: '最近 20 条' }, { value: 50, label: '最近 50 条' }, { value: 100, label: '最近 100 条' }]" />
           <button class="btn ai-btn" :disabled="busy" @click="run"><Icon name="Sparkles" :size="13" /> {{ busy ? '分析中…' : '开始分析' }}</button>
         </div>
       </div>

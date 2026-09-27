@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { saveProjects } from '../store.js';
 import { toast, closeModal } from '../ui.js';
+import Select from '../components/Select.vue';
 
 const props = defineProps({
   project: { type: Object, required: true },
@@ -43,11 +44,7 @@ function save() {
       <textarea v-model="cmd" class="input mono" rows="2" placeholder="git pull --rebase"></textarea>
     </label>
     <div class="field"><span class="f-label">触发方式</span>
-      <select v-model="type" class="select full">
-        <option value="interval">固定间隔</option>
-        <option value="daily">每天定时</option>
-        <option value="boot">插件打开时</option>
-      </select>
+      <Select v-model="type" block :options="[{ value: 'interval', label: '固定间隔' }, { value: 'daily', label: '每天定时' }, { value: 'boot', label: '插件打开时' }]" />
     </div>
     <div class="two-col">
       <label v-if="showEvery" class="field"><span class="f-label">间隔（分钟）</span>

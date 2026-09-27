@@ -3,6 +3,7 @@ import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { store, saveSettings, removeProject, startScript, stopScript, refreshAllGit, sortProjects, togglePin, isProjectRunning } from '../store.js';
 import { toast, openModal, confirmBox, applyTheme } from '../ui.js';
 import Icon from './Icon.vue';
+import Select from './Select.vue';
 import ProjectCard from './ProjectCard.vue';
 import ProjectRow from './ProjectRow.vue';
 import SysBar from './SysBar.vue';
@@ -45,6 +46,14 @@ const sortProxy = computed({
 });
 const cardView = computed(() => store.settings.cardView || 'card');
 const VIEWS = [['card', 'LayoutGrid', '卡片视图'], ['compact', 'Grid3x3', '紧凑视图'], ['list', 'List', '列表视图']];
+const sortOptions = [
+  { value: 'recent', label: '最近使用' },
+  { value: 'updated', label: '最近更新' },
+  { value: 'dirty', label: '变更最多' },
+  { value: 'running', label: '运行中优先' },
+  { value: 'tag', label: '按标签' },
+  { value: 'name', label: '名称' },
+];
 function setView(v) {
   store.settings.cardView = v;
   saveSettings();
@@ -160,14 +169,7 @@ function runFromCard(proj, script) {
         <input ref="searchEl" v-model="store.search" placeholder="搜索项目 / 路径 / 标签…（按 / 聚焦）"
                @keydown.esc="searchEl?.blur()">
       </div>
-      <select v-model="sortProxy" class="select">
-        <option value="recent">最近使用</option>
-        <option value="updated">最近更新</option>
-        <option value="dirty">变更最多</option>
-        <option value="running">运行中优先</option>
-        <option value="tag">按标签</option>
-        <option value="name">名称</option>
-      </select>
+      <Select v-model="sortProxy" :options="sortOptions" title="排序方式" />
       <button class="icon-btn" title="全部项目的未提交变更" @click="openAllChanges"><Icon name="GitBranch" :size="14" /></button>
       <button class="icon-btn" title="刷新全部 Git 状态" @click="refreshGit"><Icon name="RefreshCw" :size="14" /></button>
     </div>

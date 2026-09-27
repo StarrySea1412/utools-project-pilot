@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { store, addTodo, toggleTodo, removeTodo, clearDoneTodos, setTodoQuad } from '../store.js';
 import { timeAgo } from '../ui.js';
 import Icon from './Icon.vue';
+import Select from './Select.vue';
 
 const emit = defineEmits(['open-detail']);
 const draft = ref('');
@@ -18,6 +19,11 @@ const QUADS = [
   { id: 2, name: '紧急 · 不重要', hint: '少做', short: '琐碎' },
   { id: 3, name: '不紧急 · 不重要', hint: '以后', short: '以后' },
 ];
+const quadOptions = QUADS.map((q) => ({ value: q.id, label: q.name }));
+const projectOptions = computed(() => [
+  { value: '', label: '不关联项目' },
+  ...store.projects.map((p) => ({ value: p.id, label: p.name })),
+]);
 const qOf = (t) => ((t.q ?? 1) % 4 + 4) % 4;
 const quadOf = (t) => QUADS[qOf(t)];
 
@@ -56,14 +62,8 @@ const onDragStart = (t, ev) => ev.dataTransfer.setData('text/pilot-todo', t.id);
 <template>
   <div class="todo-input-row">
     <input class="input" v-model="draft" placeholder="记一件小事，回车添加…" @keydown.enter="onEnter">
-    <div class="quad-pick" title="新增到哪个象限">
-      <button v-for="q in QUADS" :key="q.id" class="quad-pick-btn" :class="['qp' + q.id, { active: draftQuad === q.id }]"
-              :title="q.name" @click="draftQuad = q.id">{{ q.short }}</button>
-    </div>
-    <select v-model="draftProject" class="select todo-proj-select" title="关联项目（可选）">
-      <option value="">不关联项目</option>
-      <option v-for="p in store.projects" :key="p.id" :value="p.id">{{ p.name }}</option>
-    </select>
+    <Select v-model="draftQuad" :options="quadOptions" title="新增到哪个象限" />
+    <Select v-model="draftProject" :options="projectOptions" title="关联项目（可选）" />
     <div class="subtabs tiny">
       <button class="subtab" :class="{ 'subtab-active': view === 'list' }" @click="view = 'list'">列表</button>
       <button class="subtab" :class="{ 'subtab-active': view === 'quad' }" @click="view = 'quad'">四象限</button>

@@ -4,6 +4,7 @@ import { store, saveSettings, exportAll, importAll } from '../store.js';
 import { toast, closeModal, openModal, confirmBox, applyTheme } from '../ui.js';
 import ModeModal from './ModeModal.vue';
 import Icon from '../components/Icon.vue';
+import Select from '../components/Select.vue';
 
 const ai = store.settings.ai;
 const baseUrl = ref(ai.baseUrl || '');
@@ -117,11 +118,7 @@ function onReplaceClick() {
     <section class="set-section">
       <h4><Icon name="SunMoon" :size="13" /> 外观</h4>
       <div class="field"><span class="f-label">主题</span>
-        <select v-model="theme" class="select full">
-          <option value="auto">跟随系统</option>
-          <option value="light">浅色</option>
-          <option value="dark">深色</option>
-        </select>
+        <Select v-model="theme" block :options="[{ value: 'auto', label: '跟随系统' }, { value: 'light', label: '浅色' }, { value: 'dark', label: '深色' }]" />
       </div>
     </section>
 
