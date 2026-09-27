@@ -43,6 +43,7 @@ export const store = reactive({
   todos: [],               // 全局待办：{id, text, projectId?, q(0-3 四象限), done, createdAt, doneAt}
   notifications: [],       // 通知中心：{id, icon, text, time, read, projectId?}
   aiAdvice: { date: '', at: 0, summary: '', items: [] },  // AI 今日建议（按天持久化）
+  explore: {},             // 探索模式：projectId -> {date, at, score, grade, summary, dims, ideas, ruleScore...}
 });
 
 export function load() {
@@ -58,6 +59,8 @@ export function load() {
     store.notifications = (n && n.notifications) || [];
     const a = window.pilot?.dbGet('pilot:aiAdvice');
     if (a && a.date === today()) store.aiAdvice = a;
+    const ex = window.pilot?.dbGet('pilot:explore');
+    if (ex) store.explore = ex; // 按项目缓存，UI 侧按日期判断是否过期
   } catch (e) { console.error(e); }
   const have = new Set(store.settings.analysisModes.map((m) => m.id));
   for (const m of DEFAULT_SETTINGS.analysisModes) if (!have.has(m.id)) store.settings.analysisModes.push(m);
@@ -108,6 +111,12 @@ export function saveAiAdvice(data) {
   try { window.pilot?.dbPut('pilot:aiAdvice', store.aiAdvice); } catch (e) { console.error('保存 AI 建议失败', e); }
 }
 
+// ---------- 探索模式（按项目 × 按天缓存 AI 评估结果） ----------
+export function saveExplore(projectId, data) {
+  store.explore[projectId] = { date: today(), at: Date.now(), ...data };
+  try { window.pilot?.dbPut('pilot:explore', store.explore); } catch (e) { console.error('保存探索结果失败', e); }
+}
+
 // ---------- 通知中心 ----------
 export function saveNotifications() {
   try { window.pilot?.dbPut('pilot:notifications', { notifications: store.notifications }); } catch (e) { console.error('保存通知失败', e); }
@@ -146,7 +155,7 @@ export function saveSettings() {
 }
 
 // ---------- 数据导出 / 导入（换机迁移的唯一出路，uTools db 无云同步） ----------
-const DATA_KEYS = ['pilot:projects', 'pilot:settings', 'pilot:todos', 'pilot:notifications', 'pilot:aiAdvice'];
+const DATA_KEYS = ['pilot:projects', 'pilot:settings', 'pilot:todos', 'pilot:notifications', 'pilot:aiAdvice', 'pilot:explore'];
 
 export function exportAll() {
   const data = { app: 'project-pilot', version: 1, exportedAt: new Date().toISOString() };
@@ -196,6 +205,10 @@ export async function importAll(mode = 'merge') {
   if (data['pilot:aiAdvice']?.date === today()) {
     store.aiAdvice = data['pilot:aiAdvice'];
     try { window.pilot?.dbPut('pilot:aiAdvice', store.aiAdvice); } catch (e) {}
+  }
+  if (data['pilot:explore'] && typeof data['pilot:explore'] === 'object') {
+    store.explore = Object.assign({}, store.explore, data['pilot:explore']);
+    try { window.pilot?.dbPut('pilot:explore', store.explore); } catch (e) {}
   }
   return imported;
 }

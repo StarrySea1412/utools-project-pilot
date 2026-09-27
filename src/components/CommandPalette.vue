@@ -37,6 +37,10 @@ function buildCommands() {
       id: 'proj:' + p.id, icon: 'Folder', label: p.name, hint: '项目 · ' + (p.tags?.[0] || '打开'),
       run: () => { emit('open-detail', p.id); },
     });
+    out.push({
+      id: 'explore:' + p.id, icon: 'Compass', label: `探索：${p.name}`, hint: 'AI 完成度评估 · 功能推荐',
+      run: () => { store.detailTab = 'explore'; emit('open-detail', p.id); },
+    });
     for (const s of p.scripts || []) {
       out.push({
         id: `run:${p.id}:${s.id}`, icon: s.persistent ? 'Zap' : 'Play', label: `${s.name}（${p.name}）`,

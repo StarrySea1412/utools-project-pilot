@@ -227,6 +227,29 @@ index 3a2f1bc..8d91e2f 100644
           ],
         });
       }
+      // 探索模式：返回完成度评分 + 功能推荐 JSON
+      if (/评估开发项目的完成度|探索/.test(last) || /评估开发项目的完成度/.test(messages[0]?.content || '')) {
+        return JSON.stringify({
+          score: 68,
+          grade: '成熟',
+          summary: '功能骨架完整，补齐自动化测试与用户文档即可迈上新台阶',
+          dims: [
+            { name: '文档', score: 14, note: 'README 有基础说明，缺使用示例' },
+            { name: '测试', score: 8, note: '有测试框架但覆盖不足' },
+            { name: 'CI/CD', score: 10, note: '有构建流水线，缺发布自动化' },
+            { name: '工程化', score: 18, note: 'lint/锁文件齐备' },
+            { name: '活跃度', score: 22, note: '近两周高频提交' },
+            { name: '功能完成度', score: 16, note: '核心路径可用，边缘场景待补' },
+          ],
+          ideas: [
+            { text: '为核心流程补 vitest 单测，覆盖率提到 60%', level: 2, why: '当前改动集中，回归风险随功能膨胀上升' },
+            { text: 'README 增加快速上手示例与截图', level: 2, why: '新用户 3 分钟内跑不起来就会流失' },
+            { text: '把手动发布步骤固化为 CI 任务', level: 1, why: '减少发版时的手工失误' },
+            { text: '增加数据导入的容错与回滚', level: 1, why: '导入失败目前会留半态数据' },
+            { text: '支持自定义主题色', level: 0, why: '个性化需求在用户反馈中出现过两次' },
+          ],
+        });
+      }
       if (/commit|提交/.test(last) && /diff/.test(last.toLowerCase())) return 'feat(git): 集成 AI 生成提交信息并优化变更视图';
       if (/周报/.test(messages[0]?.content || '')) {
         return '**本周主题**：Git 工作台深度打磨与界面一致性提升。\n\n## axonhub\n- 完成分支管理弹窗与 stash 快捷操作\n- 修复切换分支后的状态回弹问题\n\n## ai-learning-platform\n- 图库页 UI 迭代，新增筛选能力\n\n**风险与建议**\n- 多项目并发刷新逻辑改动较多，建议观察一周内任务失败率。';
