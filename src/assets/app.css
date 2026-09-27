@@ -786,9 +786,20 @@ body {
 .ctx-menu button:first-of-type { color: var(--accent); font-weight: 600; }
 
 /* 待办面板（Quick Notes） */
-.todo-input-row { padding: 2px 2px 8px; display: flex; align-items: center; gap: 8px; }
-.todo-input-row .input { flex: 1; min-width: 0; width: auto; }
+.todo-input-row { padding: 2px 2px 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.todo-input-row .input { flex: 1; min-width: 160px; width: auto; }
 .todo-proj-select { max-width: 150px; font-size: 12px; padding: 5px 8px; color: var(--text-2); }
+/* 新增待办时的象限选择器（颜色与四象限徽标一致） */
+.quad-pick { display: flex; gap: 3px; flex-shrink: 0; }
+.quad-pick-btn {
+  border: 1px solid var(--stroke-soft); background: var(--chip-bg); color: var(--text-3);
+  font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; cursor: pointer; transition: all 0.15s;
+}
+.quad-pick-btn:hover { color: var(--text-2); border-color: var(--stroke); }
+.quad-pick-btn.active.qp0 { background: color-mix(in srgb, var(--err) 15%, transparent); color: var(--err); border-color: transparent; }
+.quad-pick-btn.active.qp1 { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); border-color: transparent; }
+.quad-pick-btn.active.qp2 { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); border-color: transparent; }
+.quad-pick-btn.active.qp3 { background: var(--code-bg); color: var(--text-2); border-color: transparent; }
 .todo-row { display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 8px; font-size: 12.5px; }
 .todo-row:hover { background: var(--hover); }
 .todo-row.done .todo-text { color: var(--text-3); text-decoration: line-through; }

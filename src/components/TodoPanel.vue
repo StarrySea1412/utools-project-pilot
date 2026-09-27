@@ -7,6 +7,7 @@ import Icon from './Icon.vue';
 const emit = defineEmits(['open-detail']);
 const draft = ref('');
 const draftProject = ref(''); // 创建时可选关联项目
+const draftQuad = ref(1);     // 创建时选择象限（默认 重要·不紧急）
 const view = ref('list'); // list | quad
 const dragOver = ref(null); // 四象限拖拽悬停高亮
 
@@ -26,7 +27,7 @@ const byQuad = computed(() => QUADS.map((q) => open.value.filter((t) => qOf(t) =
 const projName = (id) => (store.projects.find((p) => p.id === id) || {}).name || '';
 
 function add() {
-  if (addTodo(draft.value, draftProject.value || null)) draft.value = '';
+  if (addTodo(draft.value, draftProject.value || null, draftQuad.value)) draft.value = '';
 }
 // 中文输入法选词的回车（isComposing / keyCode 229）不应添加待办
 function onEnter(e) {
@@ -55,6 +56,10 @@ const onDragStart = (t, ev) => ev.dataTransfer.setData('text/pilot-todo', t.id);
 <template>
   <div class="todo-input-row">
     <input class="input" v-model="draft" placeholder="记一件小事，回车添加…" @keydown.enter="onEnter">
+    <div class="quad-pick" title="新增到哪个象限">
+      <button v-for="q in QUADS" :key="q.id" class="quad-pick-btn" :class="['qp' + q.id, { active: draftQuad === q.id }]"
+              :title="q.name" @click="draftQuad = q.id">{{ q.short }}</button>
+    </div>
     <select v-model="draftProject" class="select todo-proj-select" title="关联项目（可选）">
       <option value="">不关联项目</option>
       <option v-for="p in store.projects" :key="p.id" :value="p.id">{{ p.name }}</option>
