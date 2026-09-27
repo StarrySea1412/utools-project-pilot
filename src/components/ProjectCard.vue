@@ -66,7 +66,7 @@ function openSvc(s) {
             class="mini-tag svc" :class="{ 'clickable-svc': s.url }"
             :title="s.url ? `点击在浏览器打开：${s.url}` : `服务运行中：${s.service || s.name}`"
             @click.stop="openSvc(s)">
-        <Icon name="Zap" :size="10" /> {{ s.service || s.name }}<template v-if="s.port"> :{{ s.port }}</template>
+        <span class="svc-tag-line"><Icon name="Zap" :size="10" /> {{ s.service || s.name }}<template v-if="s.port"><span class="svc-port">:{{ s.port }}</span></template></span>
       </span>
       <span v-if="services.length > 2" class="mini-tag svc-more" :title="services.slice(2).map((x) => (x.service || x.name) + (x.port ? ':' + x.port : '')).join(', ')">+{{ services.length - 2 }}</span>
       <span v-if="framework" class="mini-tag mono fw-tag">{{ framework }}</span>

@@ -15,6 +15,7 @@ const urgent = computed(() => buildSuggestions().filter((s) => s.level === 2).le
 const openTodos = computed(() => store.todos.filter((t) => !t.done).length);
 
 function pick(tab) {
+  userTouched.value = true;
   store.workTab = tab;
   store.workOpen = true;
 }
@@ -24,12 +25,13 @@ function openWeekly() {
 }
 
 // 有紧急建议时自动展开一次（本次会话内只打扰一回）
+// 绝不改写用户选中的子页签（避免待办页正输入时被抢回建议页），只在从未交互过时弹出
 const autoDone = ref(false);
+const userTouched = ref(false);
 watch(urgent, (n) => {
   if (n > 0 && !autoDone.value) {
     autoDone.value = true;
-    store.workTab = 'sug';
-    store.workOpen = true;
+    if (!userTouched.value) store.workOpen = true;
   }
 }, { immediate: true });
 </script>

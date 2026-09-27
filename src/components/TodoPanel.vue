@@ -6,7 +6,9 @@ import Icon from './Icon.vue';
 
 const emit = defineEmits(['open-detail']);
 const draft = ref('');
+const draftProject = ref(''); // 创建时可选关联项目
 const view = ref('list'); // list | quad
+const dragOver = ref(null); // 四象限拖拽悬停高亮
 
 // 四象限：0 紧急·重要 / 1 重要·不紧急 / 2 紧急·不重要 / 3 都不
 const QUADS = [
@@ -24,7 +26,12 @@ const byQuad = computed(() => QUADS.map((q) => open.value.filter((t) => qOf(t) =
 const projName = (id) => (store.projects.find((p) => p.id === id) || {}).name || '';
 
 function add() {
-  if (addTodo(draft.value)) draft.value = '';
+  if (addTodo(draft.value, draftProject.value || null)) draft.value = '';
+}
+// 中文输入法选词的回车（isComposing / keyCode 229）不应添加待办
+function onEnter(e) {
+  if (e.isComposing || e.keyCode === 229) return;
+  add();
 }
 function goProject(id) {
   if (!id) return;
@@ -34,11 +41,11 @@ function goProject(id) {
   emit('open-detail', id);
 }
 function cycleQuad(t) {
-  t.q = qOf(t);
-  setTodoQuad(t.id, t.q + 1);
+  setTodoQuad(t.id, qOf(t) + 1);
 }
 function onDrop(qid, ev) {
   ev.preventDefault();
+  dragOver.value = null;
   const id = ev.dataTransfer.getData('text/pilot-todo');
   if (id) setTodoQuad(id, qid);
 }
@@ -47,7 +54,11 @@ const onDragStart = (t, ev) => ev.dataTransfer.setData('text/pilot-todo', t.id);
 
 <template>
   <div class="todo-input-row">
-    <input class="input" v-model="draft" placeholder="记一件小事，回车添加…" @keydown.enter="add">
+    <input class="input" v-model="draft" placeholder="记一件小事，回车添加…" @keydown.enter="onEnter">
+    <select v-model="draftProject" class="select todo-proj-select" title="关联项目（可选）">
+      <option value="">不关联项目</option>
+      <option v-for="p in store.projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+    </select>
     <div class="subtabs tiny">
       <button class="subtab" :class="{ 'subtab-active': view === 'list' }" @click="view = 'list'">列表</button>
       <button class="subtab" :class="{ 'subtab-active': view === 'quad' }" @click="view = 'quad'">四象限</button>
@@ -57,18 +68,18 @@ const onDragStart = (t, ev) => ev.dataTransfer.setData('text/pilot-todo', t.id);
 
   <!-- 列表视图 -->
   <template v-if="view === 'list'">
-    <div v-for="t in open" :key="t.id" class="todo-row" draggable="true" @dragstart="onDragStart(t, $event)">
+    <div v-for="t in open" :key="t.id" class="todo-row">
       <button class="todo-check" title="完成" @click="toggleTodo(t.id)"></button>
       <span class="todo-text" :title="t.text">{{ t.text }}</span>
       <span class="quad-badge" :class="'qb' + qOf(t)" :title="'所属象限：' + quadOf(t).name + '，点击切换'" @click="cycleQuad(t)">{{ quadOf(t).short }}</span>
-      <span v-if="t.projectId" class="mini-tag mono" :title="'关联项目：' + projName(t.projectId)" @click="goProject(t.projectId)">{{ projName(t.projectId) }}</span>
+      <span v-if="t.projectId" class="mini-tag mono" :title="'关联项目：' + projName(t.projectId) + '，点击打开'" @click="goProject(t.projectId)">{{ projName(t.projectId) }}</span>
       <span class="c-time">{{ timeAgo(t.createdAt) }}</span>
       <button class="icon-btn sm" title="删除" @click="removeTodo(t.id)"><Icon name="X" :size="12" /></button>
     </div>
     <div v-for="t in done" :key="t.id" class="todo-row done">
       <button class="todo-check checked" title="取消完成" @click="toggleTodo(t.id)"><Icon name="Check" :size="9" /></button>
       <span class="todo-text" :title="t.text">{{ t.text }}</span>
-      <span v-if="t.projectId" class="mini-tag mono" :title="'关联项目：' + projName(t.projectId)" @click="goProject(t.projectId)">{{ projName(t.projectId) }}</span>
+      <span v-if="t.projectId" class="mini-tag mono" :title="'关联项目：' + projName(t.projectId) + '，点击打开'" @click="goProject(t.projectId)">{{ projName(t.projectId) }}</span>
       <span class="c-time">{{ timeAgo(t.doneAt || t.createdAt) }}</span>
       <button class="icon-btn sm" title="删除" @click="removeTodo(t.id)"><Icon name="X" :size="12" /></button>
     </div>
@@ -77,8 +88,8 @@ const onDragStart = (t, ev) => ev.dataTransfer.setData('text/pilot-todo', t.id);
 
   <!-- 四象限视图 -->
   <div v-else class="quad-grid">
-    <div v-for="(items, qi) in byQuad" :key="qi" class="quad-cell" :class="'q' + qi"
-         @dragover.prevent @drop="onDrop(qi, $event)">
+    <div v-for="(items, qi) in byQuad" :key="qi" class="quad-cell" :class="['q' + qi, { dragover: dragOver === qi }]"
+         @dragover.prevent @dragenter.prevent="dragOver = qi" @dragleave="dragOver === qi && (dragOver = null)" @drop="onDrop(qi, $event)">
       <div class="quad-head">
         <span class="q-name">{{ QUADS[qi].name }}</span>
         <span class="q-hint">{{ items.length ? items.length + ' 项' : QUADS[qi].hint }}</span>
@@ -86,7 +97,7 @@ const onDragStart = (t, ev) => ev.dataTransfer.setData('text/pilot-todo', t.id);
       <div v-for="t in items" :key="t.id" class="todo-mini-row" draggable="true" @dragstart="onDragStart(t, $event)">
         <button class="todo-check" title="完成" @click="toggleTodo(t.id)"></button>
         <span class="todo-text" :title="t.text + (t.projectId ? ' · ' + projName(t.projectId) : '')">{{ t.text }}</span>
-        <span v-if="t.projectId" class="mini-tag mono" :title="'关联项目：' + projName(t.projectId)" @click="goProject(t.projectId)">{{ projName(t.projectId) }}</span>
+        <span v-if="t.projectId" class="mini-tag mono" :title="'关联项目：' + projName(t.projectId) + '，点击打开'" @click="goProject(t.projectId)">{{ projName(t.projectId) }}</span>
         <button class="icon-btn sm" title="删除" @click="removeTodo(t.id)"><Icon name="X" :size="12" /></button>
       </div>
       <span v-if="!items.length" class="q-empty">拖待办到这里</span>
