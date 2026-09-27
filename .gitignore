@@ -3,3 +3,4 @@ dist/
 .pilot-dev-db.json
 *.log
 .DS_Store
+.zcode/
