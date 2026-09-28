@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 import { store, portProject } from '../store.js';
 import { closeModal } from '../ui.js';
 import Icon from '../components/Icon.vue';
-import { portLabel, portKind, KIND_LABEL, isHttpPort, detectServiceName } from '../ports.js';
+import { portLabel, portKind, KIND_LABEL, isHttpPort, detectServiceName, fmtMem } from '../ports.js';
 
 const filter = ref('all'); // 'all' | 'projects' | 'other'
 
@@ -108,6 +108,7 @@ async function kill(p) {
           {{ p.names.join(', ') || '未知进程' }}
         </span>
 
+        <span v-if="p.mem" class="port-mem mono" title="进程内存占用">{{ fmtMem(p.mem) }}</span>
         <span class="port-pids">PID {{ p.pids.join('/') || '—' }}</span>
 
         <button v-if="canKill(p)" class="kill-btn" :class="{ armed: armed === p.port }"

@@ -2,6 +2,7 @@
 import { computed, ref, onMounted } from 'vue';
 import { store, startScript, stopScript, projectPorts, projectServices, watchProc, checkGit } from '../store.js';
 import { toast, timeAgo, commitType } from '../ui.js';
+import { fmtMem } from '../ports.js';
 import Icon from './Icon.vue';
 
 const props = defineProps({ project: { type: Object, required: true } });
@@ -99,6 +100,7 @@ function toGit() { store.detailTab = 'git'; }
             <span class="svc-name">{{ s.service || s.name }}</span>
             <span class="mono svc-cmd" :title="s.cmd || '外部终端启动的进程'">{{ s.cmd || '外部终端启动的进程' }}</span>
             <span class="spacer"></span>
+            <span v-if="s.mem" class="mini-tag mono" title="该服务进程内存占用">{{ fmtMem(s.mem) }}</span>
             <span class="mini-tag svc" title="外部启动，由系统 netstat 实时检测">外部</span>
             <span v-if="s.port" class="mini-tag mono svc">PID {{ s.pid || '—' }}</span>
             <button v-if="s.url" class="btn sm btn-ghost" @click="window.pilot.openInBrowser(s.url)"><Icon name="ExternalLink" :size="11" /> 打开</button>

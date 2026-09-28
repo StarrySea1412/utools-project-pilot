@@ -12,7 +12,7 @@ globalThis.window = {
 };
 
 const { store, matchProjectForPort, projectServices, projectPorts, portProject, isProjectRunning } = await import('../src/store.js');
-const { detectServiceName, normalizePath, pathContains, isHttpPort, portUrl } = await import('../src/ports.js');
+const { detectServiceName, normalizePath, pathContains, isHttpPort, portUrl, fmtMem } = await import('../src/ports.js');
 
 function mkProj(id, name, path, extra = {}) {
   return { id, name, path, tags: [], scripts: [], tasks: [], notes: '', createdAt: 0, lastOpened: 0, ...extra };
@@ -79,6 +79,17 @@ describe('HTTP 端口识别', () => {
   it('portUrl：HTTP 端口返回 URL，非 HTTP 返回 null', () => {
     expect(portUrl(3000)).toBe('http://localhost:3000');
     expect(portUrl(3306)).toBeNull();
+  });
+});
+
+describe('内存格式化 fmtMem', () => {
+  it('空值返回空串，KB/MB/GB 分级显示', () => {
+    expect(fmtMem(0)).toBe('');
+    expect(fmtMem(null)).toBe('');
+    expect(fmtMem(4096)).toBe('4 KB');
+    expect(fmtMem(1048576)).toBe('1.0 MB');
+    expect(fmtMem(156*1048576)).toBe('156.0 MB');
+    expect(fmtMem(2*1073741824)).toBe('2.00 GB');
   });
 });
 
@@ -161,13 +172,14 @@ describe('项目服务列表 projectServices', () => {
   it('外部服务带端口与服务名和 URL', () => {
     store.projects = [mkProj('p1', 'app', 'D:/project/app')];
     store.sys = { ports: [
-      { port: 5173, pids: [222], names: ['node.exe'], commandLine: 'node D:/project/app/node_modules/vite/bin/vite.js' },
+      { port: 5173, pids: [222], names: ['node.exe'], commandLine: 'node D:/project/app/node_modules/vite/bin/vite.js', mem: 98 * 1048576 },
     ] };
     const svcs = projectServices(store.projects[0]);
     expect(svcs.length).toBe(1);
     expect(svcs[0].port).toBe(5173);
     expect(svcs[0].isInternal).toBe(false);
     expect(svcs[0].url).toBe('http://localhost:5173');
+    expect(svcs[0].mem).toBe(98 * 1048576); // 内存占用透传
   });
 
   it('isProjectRunning：无服务时 false，有内部脚本或外部服务时 true', () => {

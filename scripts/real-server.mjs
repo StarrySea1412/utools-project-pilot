@@ -265,7 +265,7 @@ function sysSelf() {
     pct: mu.rss / os.totalmem(),
   };
 }
-let tasklistCache = { at: 0, map: new Map() };
+let tasklistCache = { at: 0, map: new Map() }; // pid -> { name, mem(bytes) }
 async function pidNameMap() {
   if (Date.now() - tasklistCache.at < 30000) return tasklistCache.map;
   const r = await new Promise((resolve) => {
@@ -275,8 +275,13 @@ async function pidNameMap() {
   const text = r ? new TextDecoder('gbk').decode(r) : '';
   const map = new Map();
   for (const line of text.split('\n')) {
-    const m = line.match(/^"([^"]+)","(\d+)"/);
-    if (m) map.set(+m[2], m[1]);
+    // CSV 列：映像名, PID, 会话名, 会话#, 内存占用（如 "45,678 K"）
+    const f = line.match(/"([^"]*)"/g);
+    if (!f || f.length < 5) continue;
+    const pid = +f[1].slice(1, -1);
+    if (!pid) continue;
+    const memM = f[4].match(/([\d,.]+)\s*K/i);
+    map.set(pid, { name: f[0].slice(1, -1), mem: memM ? Math.round(parseFloat(memM[1].replace(/,/g, '')) * 1024) : 0 });
   }
   tasklistCache = { at: Date.now(), map };
   return map;
@@ -321,22 +326,25 @@ async function queryProcessesUnix(pids) {
         const cmdRaw = await fsp.readFile(`/proc/${pid}/cmdline`, 'utf8').catch(() => '');
         const commandLine = cmdRaw.split('\0').filter(Boolean).join(' ');
         const exe = await fsp.readlink(`/proc/${pid}/exe`).catch(() => '');
-        res.set(pid, { pid, ppid: null, name: path.basename(exe) || '', commandLine, executablePath: exe });
+        const statRaw = await fsp.readFile(`/proc/${pid}/status`, 'utf8').catch(() => '');
+        const mm = statRaw.match(/^VmRSS:\s+(\d+)\s*kB/m);
+        res.set(pid, { pid, ppid: null, name: path.basename(exe) || '', commandLine, executablePath: exe, mem: mm ? +mm[1] * 1024 : 0 });
       } catch (e) {}
     }
     return res;
   }
   const r = await new Promise((resolve) => {
-    execFile('ps', ['-p', pids.join(','), '-o', 'pid=,ppid=,comm=,command='], { timeout: 5000 }, (err, stdout) => resolve(err ? '' : stdout));
+    execFile('ps', ['-p', pids.join(','), '-o', 'pid=,ppid=,comm=,rss=,command='], { timeout: 5000 }, (err, stdout) => resolve(err ? '' : stdout));
   });
   for (const line of (r || '').split('\n')) {
     const parts = line.trim().split(/\s+/);
-    if (parts.length >= 4) {
+    if (parts.length >= 5) {
       const pid = +parts[0];
       const ppid = +parts[1];
       const name = parts[2];
-      const commandLine = parts.slice(3).join(' ');
-      if (pid) res.set(pid, { pid, ppid, name, commandLine, executablePath: name });
+      const mem = +parts[3] * 1024 || 0;
+      const commandLine = parts.slice(4).join(' ');
+      if (pid) res.set(pid, { pid, ppid, name, commandLine, executablePath: name, mem });
     }
   }
   return res;
@@ -394,29 +402,40 @@ async function sysPorts() {
     if (!allListeningPids.has(cachedPid)) procInfoCache.delete(cachedPid);
   }
 
-  const missingPids = [...allListeningPids].filter((pid) => !procInfoCache.has(pid));
-  if (missingPids.length > 0) {
-    try {
-      const queried = isWin ? await queryProcessesWin(missingPids) : await queryProcessesUnix(missingPids);
-      for (const [pid, info] of queried) {
-        procInfoCache.set(pid, { at: Date.now(), ...info });
-      }
-    } catch (e) {}
-  }
-
-  const needNamePids = [...allListeningPids].filter((pid) => !procInfoCache.get(pid)?.name);
-  if (needNamePids.length > 0 && isWin) {
-    try {
-      const nameMap = await pidNameMap();
-      for (const pid of needNamePids) {
-        const n = nameMap.get(pid);
-        if (n) {
-          const cur = procInfoCache.get(pid) || { pid, ppid: null, commandLine: '', executablePath: '' };
-          cur.name = n;
+  if (isWin) {
+    const missingPids = [...allListeningPids].filter((pid) => !procInfoCache.has(pid));
+    if (missingPids.length > 0) {
+      try {
+        const queried = await queryProcessesWin(missingPids);
+        for (const [pid, info] of queried) {
+          procInfoCache.set(pid, { at: Date.now(), ...info });
+        }
+      } catch (e) {}
+    }
+    // tasklist 常刷（自身 30s TTL）：补全进程名并刷新内存占用
+    if (allListeningPids.size > 0) {
+      try {
+        const nm = await pidNameMap();
+        for (const pid of allListeningPids) {
+          const rec = nm.get(pid);
+          if (!rec) continue;
+          const cur = procInfoCache.get(pid) || { pid, ppid: null, commandLine: '', executablePath: '', mem: 0 };
+          if (rec.name && !cur.name) cur.name = rec.name;
+          if (rec.mem) cur.mem = rec.mem;
           procInfoCache.set(pid, cur);
         }
-      }
-    } catch (e) {}
+      } catch (e) {}
+    }
+  } else {
+    // unix：/proc 与 ps 读取廉价，每轮全量刷新（含内存）
+    if (allListeningPids.size > 0) {
+      try {
+        const queried = await queryProcessesUnix([...allListeningPids]);
+        for (const [pid, info] of queried) {
+          procInfoCache.set(pid, { at: Date.now(), ...info });
+        }
+      } catch (e) {}
+    }
   }
 
   const activeInternal = [];
@@ -434,8 +453,9 @@ async function sysPorts() {
   const result = [];
   for (const [port, pidsSet] of rawPorts.entries()) {
     const pids = [...pidsSet];
-    const processes = pids.map((pid) => procInfoCache.get(pid) || { pid, name: '', commandLine: '', executablePath: '', ppid: null });
+    const processes = pids.map((pid) => procInfoCache.get(pid) || { pid, name: '', commandLine: '', executablePath: '', ppid: null, mem: 0 });
     const names = [...new Set(processes.map((p) => p.name).filter(Boolean))];
+    const mem = processes.reduce((n, p) => n + (p.mem || 0), 0);
 
     let isInternal = false;
     let internalScriptName = null;
@@ -463,6 +483,7 @@ async function sysPorts() {
       isInternal,
       scriptName: internalScriptName,
       cwd: internalCwd,
+      mem,
       processes,
     });
   }

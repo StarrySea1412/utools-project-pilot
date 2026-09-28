@@ -605,6 +605,7 @@ export function projectServices(proj) {
           internalEntry.pids = p.pids || internalEntry.pids;
           internalEntry.pid = (p.pids || [])[0] || internalEntry.pid;
           internalEntry.url = portUrl(p.port);
+          internalEntry.mem = p.mem || internalEntry.mem || 0;
         } else {
           list.push({
             port: p.port,
@@ -615,6 +616,7 @@ export function projectServices(proj) {
             cmd: p.commandLine || '',
             isInternal: !!p.isInternal,
             url: portUrl(p.port),
+            mem: p.mem || 0,
           });
         }
       }
@@ -654,5 +656,6 @@ export function portProject(portNumber) {
     port: p.port,
     pids: p.pids || [],
     cmd: p.commandLine || '',
+    mem: p.mem || 0,
   };
 }

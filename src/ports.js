@@ -36,6 +36,15 @@ export function normalizePath(p) {
     .toLowerCase();
 }
 
+// 字节数 → 可读内存（<1MB 显示 KB，否则 MB/GB 一位小数）
+export function fmtMem(bytes) {
+  const b = Number(bytes) || 0;
+  if (b <= 0) return '';
+  if (b < 1024 * 1024) return Math.max(1, Math.round(b / 1024)) + ' KB';
+  if (b < 1024 * 1024 * 1024) return (b / 1048576).toFixed(1) + ' MB';
+  return (b / 1073741824).toFixed(2) + ' GB';
+}
+
 // 边界安全的路径包含检测（避免 /project/app 误判到 /project/app-plus）
 export function pathContains(parent, childOrCmd) {
   const p = normalizePath(parent);

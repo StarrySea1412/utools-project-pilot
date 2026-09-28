@@ -1,7 +1,7 @@
 <script setup>
 // TabExplore.vue — 探索模式：AI 评估项目完成度 + 推荐下一步功能
 import { ref, computed, onMounted } from 'vue';
-import { store, saveExplore, today } from '../store.js';
+import { store, saveExplore, today, addTodo } from '../store.js';
 import { exploreAdvice, collectExploreContext, ruleScore, gradeOf } from '../explore.js';
 import { toast, timeAgo } from '../ui.js';
 import Icon from './Icon.vue';
@@ -56,6 +56,13 @@ async function analyze() {
 }
 
 onMounted(() => { if (!cachedFresh.value) analyze(); });
+
+// 推荐一键转待办：level 2→紧急象限、1→重要、0→以后，自动关联本项目
+function toTodo(it) {
+  const quad = it.level === 2 ? 0 : it.level === 1 ? 1 : 3;
+  const t = addTodo(it.text, props.project.id, quad);
+  if (t) toast(`已加入待办：${it.text.slice(0, 24)}${it.text.length > 24 ? '…' : ''}`, 'ok');
+}
 </script>
 
 <template>
@@ -130,6 +137,8 @@ onMounted(() => { if (!cachedFresh.value) analyze(); });
             <p class="ex-idea-text">{{ it.text }}</p>
             <p v-if="it.why" class="ex-idea-why">{{ it.why }}</p>
           </div>
+          <button class="btn sm btn-ghost ex-idea-todo" :title="'转待办（关联 ' + project.name + '）'"
+                  @click="toTodo(it)"><Icon name="ListTodo" :size="12" /> 待办</button>
         </div>
       </div>
     </section>
