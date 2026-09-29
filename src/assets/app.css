@@ -1072,3 +1072,15 @@ body {
 
 /* 10) 数字等宽 + 略小：所有计量值（内存/端口/评分）统一 mono 11px */
 .rt-mem, .port-mem, .svc-mem, .ex-dim-val { font-variant-numeric: tabular-nums; }
+
+/* tab 图标：未选中弱化，选中随文字着色 */
+.tab-ico { opacity: 0.55; flex-shrink: 0; }
+.tab-active .tab-ico { opacity: 0.9; }
+
+/* 运行时面板：可折叠标题栏 */
+.rt-panel .rt-head { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
+.rt-panel .rt-head .panel-title { display: inline-flex; align-items: center; gap: 6px; }
+.rt-panel.collapsed { padding: 8px 14px; }
+.rt-panel.collapsed .rt-head { opacity: 0.85; }
+.rt-panel.collapsed .rt-head:hover { opacity: 1; }
+.rt-collapse-hint { font-size: 11px; color: var(--text-3); }

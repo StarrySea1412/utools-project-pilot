@@ -9,6 +9,7 @@ import Icon from './Icon.vue';
 
 const emit = defineEmits(['open-detail']);
 const expanded = ref({}); // 服务行日志展开
+const collapsed = ref(false); // 面板折叠状态
 
 // 汇总：每个项目 × projectServices（内部 + 外部）
 const allServices = computed(() => {
@@ -24,6 +25,9 @@ const allServices = computed(() => {
 });
 
 const isRunning = computed(() => allServices.value.length > 0);
+const totalMem = computed(() => allServices.value.reduce((n, s) => n + (s.mem || 0), 0));
+// 本插件自身占用（与 SysBar 同源）
+const selfRss = computed(() => store.sys?.self?.rss ? (store.sys.self.rss / 1048576).toFixed(1) : null);
 
 function toggleLog(key) { expanded.value[key] = !expanded.value[key]; }
 function logOf(s) {
@@ -64,11 +68,18 @@ function toProject(id) { emit('open-detail', id); }
 </script>
 
 <template>
-  <section v-if="isRunning" class="glass panel rt-panel">
-    <h4 class="panel-title"><Icon name="Activity" :size="14" /> 运行时 · {{ allServices.length }} 个服务
-      <span class="mini-tag svc mono" title="内部 = 插件启动，外部 = 终端/IDE 启动自动探测">内存合计 {{ fmtMem(allServices.reduce((n, s) => n + (s.mem || 0), 0)) }}</span>
-    </h4>
-    <div class="rt-rows">
+  <section v-if="isRunning" class="glass panel rt-panel" :class="{ collapsed }">
+    <div class="rt-head" @click="collapsed = !collapsed">
+      <h4 class="panel-title"><Icon name="Activity" :size="14" /> 运行时 · {{ allServices.length }} 个服务</h4>
+      <span class="mini-tag svc mono" title="全部服务进程内存合计">服务 {{ fmtMem(totalMem) }}</span>
+      <span v-if="selfRss" class="mini-tag mono" title="本插件进程内存占用">自身 {{ selfRss }} MB</span>
+      <span class="spacer"></span>
+      <span class="rt-collapse-hint">{{ collapsed ? '展开' : '' }}</span>
+      <button class="icon-btn sm" :title="collapsed ? '展开面板' : '折叠面板'" @click.stop="collapsed = !collapsed">
+        <Icon :name="collapsed ? 'ChevronDown' : 'ChevronUp'" :size="12" />
+      </button>
+    </div>
+    <div v-if="!collapsed" class="rt-rows">
       <div v-for="s in allServices" :key="(s.project.id) + ':' + (s.port || s.name)" class="rt-row" :class="{ internal: s.isInternal }">
         <span class="rt-led" :class="{ on: true }"></span>
         <button class="rt-name" :title="s.project.name" @click="toProject(s.project.id)">{{ s.service || s.name }}</button>

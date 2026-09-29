@@ -13,11 +13,13 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue']);
 
 const root = ref(null);
+const triggerRef = ref(null);
 const menu = ref(null);
 const open = ref(false);
 const hoverIdx = ref(-1);
 const alignRight = ref(false);
 const openUp = ref(false);
+const menuStyle = ref({}); // fixed 定位坐标（Teleport 到 body，不受滚动容器裁剪）
 
 const curLabel = computed(() => {
   const hit = props.options.find((o) => o.value === props.modelValue);
@@ -28,13 +30,19 @@ async function toggle() {
   if (open.value) { close(); return; }
   open.value = true;
   hoverIdx.value = Math.max(0, props.options.findIndex((o) => o.value === props.modelValue));
+  menuStyle.value = { visibility: 'hidden' }; // 先隐藏量尺寸，再定位显示
   await nextTick();
-  // 右缘溢出 → 右对齐；下缘溢出 → 向上弹开
-  alignRight.value = openUp.value = false;
+  // 按触发器几何定位（fixed）：右缘溢出 → 右对齐；下缘溢出 → 向上弹；并钳制不超出视口
+  const t = triggerRef.value?.getBoundingClientRect();
   const m = menu.value?.getBoundingClientRect();
-  if (m) {
-    if (m.right > window.innerWidth - 8) alignRight.value = true;
-    if (m.bottom > window.innerHeight - 8) openUp.value = true;
+  if (t && m) {
+    const GAP = 5;
+    const openUpward = t.bottom + m.height + GAP > window.innerHeight - 8;
+    const left = Math.max(8, Math.min(t.left, window.innerWidth - m.width - 8));
+    const top = openUpward ? Math.max(8, t.top - m.height - GAP) : t.bottom + GAP;
+    menuStyle.value = { left: left + 'px', top: top + 'px', visibility: 'visible' };
+  } else {
+    menuStyle.value = { visibility: 'visible' };
   }
 }
 function choose(opt) {
@@ -66,21 +74,25 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="root" class="sel" :class="{ 'sel-block': block }" @keydown="onKeydown">
-    <button type="button" class="sel-trigger" :class="{ on: open }" @click="toggle">
+    <button type="button" ref="triggerRef" class="sel-trigger" :class="{ on: open }" @click="toggle">
       <span class="sel-label">{{ curLabel }}</span>
       <Icon name="ChevronDown" :size="13" class="sel-caret" />
     </button>
-    <div v-if="open" ref="menu" class="sel-menu" :class="{ 'align-right': alignRight, 'open-up': openUp }">
-      <div v-for="(o, i) in options" :key="o.value" class="sel-opt" :class="{ selected: o.value === modelValue, hover: i === hoverIdx }"
-           @click="choose(o)" @mouseenter="hoverIdx = i">
-        <Icon name="Check" :size="12" class="opt-check" />
-        <span class="opt-label">{{ o.label }}</span>
+    <Teleport to="body">
+      <div v-if="open" ref="menu" class="sel-menu" :style="menuStyle"
+           :class="{ 'align-right': alignRight, 'open-up': openUp }">
+        <div v-for="(o, i) in options" :key="o.value" class="sel-opt" :class="{ selected: o.value === modelValue, hover: i === hoverIdx }"
+             @click="choose(o)" @mouseenter="hoverIdx = i">
+          <Icon name="Check" :size="12" class="opt-check" />
+          <span class="opt-label">{{ o.label }}</span>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
-<style scoped>
+<style>
+/* 不用 scoped：菜单 Teleport 到 body，scoped 属性选择器够不到 */
 .sel { position: relative; display: inline-flex; min-width: 0; }
 .sel-block { width: 100%; }
 .sel-trigger {
@@ -95,13 +107,12 @@ onBeforeUnmount(() => {
 .sel-caret { flex-shrink: 0; color: var(--text-3); transition: transform 0.15s; }
 .sel-trigger.on .sel-caret { transform: rotate(180deg); }
 .sel-menu {
-  position: absolute; top: calc(100% + 5px); left: 0; min-width: 100%; width: max-content;
+  position: fixed; min-width: 100px; width: max-content;
   background: var(--glass-strong); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--stroke-soft); border-radius: 12px; box-shadow: var(--shadow-lg);
-  padding: 4px; z-index: 60; max-height: 264px; overflow-y: auto;
+  padding: 4px; z-index: 300; max-height: 264px; overflow-y: auto;
 }
-.sel-menu.align-right { left: auto; right: 0; }
-.sel-menu.open-up { top: auto; bottom: calc(100% + 5px); }
+.sel-menu.align-right { text-align: left; }
 .sel-opt {
   display: flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 8px;
   font-size: 12.5px; font-weight: 600; color: var(--text-2); cursor: pointer; white-space: nowrap;

@@ -13,8 +13,8 @@ import EditProjectModal from '../modals/EditProjectModal.vue';
 import Icon from './Icon.vue';
 
 const TABS = [
-  ['overview', '概览'], ['scripts', '脚本'], ['git', 'Git'],
-  ['notes', '备忘'], ['tasks', '任务'], ['files', '文件'], ['explore', '探索'],
+  ['overview', '概览', 'LayoutGrid'], ['scripts', '脚本', 'Terminal'], ['git', 'Git', 'GitBranch'],
+  ['notes', '备忘', 'Pencil'], ['tasks', '任务', 'Timer'], ['files', '文件', 'Folder'], ['explore', '探索', 'Compass'],
 ];
 const TAB_COMPS = { overview: TabOverview, scripts: TabScripts, git: TabGit, notes: TabNotes, tasks: TabTasks, files: TabFiles, explore: TabExplore };
 
@@ -65,8 +65,9 @@ const openTerminal = (p) => window.pilot.openTerminal(p);
     </header>
 
     <nav class="tabbar glass">
-      <button v-for="[id, label] in TABS" :key="id" class="tab"
+      <button v-for="[id, label, icon] in TABS" :key="id" class="tab"
               :class="{ 'tab-active': store.detailTab === id }" @click="store.detailTab = id">
+        <Icon :name="icon" :size="13" class="tab-ico" />
         {{ label }}
         <span v-if="id === 'git' && st?.dirty" class="tab-badge">{{ st.dirty }}</span>
         <span v-if="id === 'tasks' && (proj.tasks || []).some((t) => t.enabled)" class="tab-dot"></span>
