@@ -305,19 +305,46 @@ export function watchProc(scriptId) {
 
 export function startScript(proj, script) {
   const r = window.pilot.runScript(proj.path, script);
-  store.procHandles[script.id] = { id: r.id, running: true, scriptName: script.name, projectId: proj.id };
+  store.procHandles[script.id] = { id: r.id, running: true, scriptName: script.name, projectId: proj.id, pid: r.pid || null, startedAt: Date.now() };
   store.procLogs[r.id] = '';
   proj.lastOpened = Date.now();
   saveProjects();
   watchProc(script.id);
   store.consoleOpen = script.id;
+  startProcWatch(proj, script, r.id);
   return r;
+}
+
+// 服务退出监测：轮询后端真实状态；非手动停止的退出 → 通知中心 + 系统通知
+const procWatchTimers = {};
+function startProcWatch(proj, script, procId) {
+  clearInterval(procWatchTimers[script.id]);
+  procWatchTimers[script.id] = setInterval(async () => {
+    const h = store.procHandles[script.id];
+    if (!h || h.id !== procId) { clearInterval(procWatchTimers[script.id]); return; }
+    try {
+      const rec = window.pilot.getProc(procId);
+      if (!rec) { // 进程不存在（插件重启等）：按停止处理，不告警
+        clearInterval(procWatchTimers[script.id]);
+        return;
+      }
+      if (!rec.running && h.running) {
+        h.running = false; // 同步真实退出状态
+        clearInterval(procWatchTimers[script.id]);
+        if (!h.stopping) { // 用户主动 stopScript 会预先置 stopping
+          const code = rec.code == null ? '' : `（退出码 ${rec.code}）`;
+          pushNotification('TriangleAlert', `服务「${script.name}」已退出${code} — ${proj.name}`, { projectId: proj.id });
+        }
+      }
+    } catch (e) { clearInterval(procWatchTimers[script.id]); }
+  }, 5000);
 }
 
 export async function stopScript(script) {
   const h = store.procHandles[script.id];
   if (!h) return;
-  h.running = false; // 先置：按钮立即回弹，避免 10s 轮询期间 UI 卡在「停止中」
+  h.stopping = true; // 标记主动停止：退出监测不再告警
+  h.running = false; // 先置：按钮立即回弹，避免轮询期间 UI 卡在「停止中」
   try { await window.pilot.stopProc(h.id); } catch (e) { /* 后端已死无所谓 */ }
   if (store.consoleOpen === script.id) store.consoleOpen = null;
 }

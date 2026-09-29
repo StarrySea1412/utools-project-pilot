@@ -158,7 +158,7 @@ function startScript(cwd, script) {
   proc.on('exit', (code) => { handle.running = false; handle.code = code; });
   proc.on('error', (err) => { handle.out += `[启动失败] ${err.message}\n`; handle.running = false; handle.code = -1; });
   procs.set(id, { proc, handle });
-  return { id, running: true };
+  return { id, running: true, pid: proc.pid };
 }
 function stopProc(id) {
   const rec = procs.get(id);
