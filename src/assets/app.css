@@ -986,3 +986,89 @@ body {
 .svc-mem { font-family: var(--mono); font-size: 9.5px; opacity: 0.75; margin-left: 1px; }
 .port-mem { color: var(--accent-2); font-size: 11px; font-weight: 700; flex-shrink: 0; }
 .ex-idea-todo { flex-shrink: 0; align-self: center; white-space: nowrap; }
+
+/* ---------- 运行时面板（Lazydocker 式全局服务视图） ---------- */
+.rt-panel { border-radius: var(--r-lg); padding: 10px 14px; flex-shrink: 0; }
+.rt-rows { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.rt-row {
+  display: grid; grid-template-columns: 10px auto auto auto 1fr auto auto auto auto; align-items: center; gap: 8px;
+  padding: 5px 8px; border-radius: 9px; font-size: 12.5px; min-height: 30px;
+}
+.rt-row:hover { background: var(--hover); }
+.rt-row.internal { border-left: 2px solid var(--ok); }
+.rt-led { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); flex-shrink: 0; }
+.rt-name { border: none; background: none; color: var(--text); font-weight: 700; font-size: 12.5px; cursor: pointer; padding: 0; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font); }
+.rt-name:hover { color: var(--accent); text-decoration: underline; }
+.rt-port { color: var(--accent-2); font-weight: 700; font-size: 11.5px; border: none; background: none; padding: 0; }
+.rt-port.clickable { cursor: pointer; }
+.rt-port.clickable:hover { text-decoration: underline; }
+.rt-port.muted { color: var(--text-3); }
+.rt-mem { color: var(--text-3); font-size: 11px; text-align: right; min-width: 52px; }
+.rt-log {
+  grid-column: 1 / -1; margin: 2px 0 4px; padding: 8px 10px; border-radius: 8px;
+  background: var(--code-bg); color: var(--text-2); font-size: 11px; line-height: 1.55;
+  max-height: 180px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+}
+
+/* 四象限看板（Linear 式列卡） */
+.board-col { display: flex; flex-direction: column; min-height: 120px; max-height: 340px; }
+.board-cards { display: flex; flex-direction: column; gap: 6px; overflow-y: auto; padding-right: 2px; flex: 1; }
+.board-card {
+  border: 1px solid var(--stroke-soft); border-radius: 10px; padding: 8px 10px; cursor: grab;
+  background: var(--glass-strong); display: flex; flex-direction: column; gap: 6px;
+  transition: border-color 0.15s, transform 0.12s;
+}
+.board-card:hover { border-color: var(--stroke); transform: translateY(-1px); }
+.board-card:active { cursor: grabbing; }
+.board-card-head { display: flex; align-items: flex-start; gap: 7px; }
+.board-card-head .todo-text { flex: 1; line-height: 1.45; }
+.board-card-foot { display: flex; align-items: center; gap: 6px; }
+.board-card-foot .c-time { font-size: 10.5px; color: var(--text-3); }
+
+/* ================================================================
+   设计精修层 v3 — 借鉴 Linear DESIGN.md（awesome-design-md）
+   原则：焦点环统一 / 标题负字距 / 交互一致性 / 克制的强调色
+   ================================================================ */
+
+/* 1) 统一焦点环：所有可交互元素获得 2px 半透明强调环（Linear: focus ring 2px @50%） */
+:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  outline-offset: 1px;
+  border-radius: inherit;
+}
+
+/* 2) 标题负字距：大标题用克制的负 tracking，正文保持 0（Linear: display 600 + 负字距） */
+.brand h1, .detail-bar h2, .card-title h3, .panel-title, .ex-grade-row .panel-title {
+  letter-spacing: -0.3px;
+}
+.brand h1 { font-weight: 600; }
+
+/* 3) 按钮/交互触感统一：hover 位移统一为 1px 且加速（Linear: 8px 圆角按钮） */
+.btn, .icon-btn { transition: background 0.14s ease, transform 0.14s ease, box-shadow 0.14s ease, border-color 0.14s ease, color 0.14s ease; }
+.btn:active, .icon-btn:active { transform: translateY(0) scale(0.97); transition-duration: 0.06s; }
+
+/* 4) 主按钮按下态：加深而非上浮（Linear: pressed 用 primary-focus） */
+.btn-primary:active { background: color-mix(in srgb, var(--accent) 85%, #000); transform: none; }
+.ai-btn:active { background: color-mix(in srgb, var(--accent-2) 85%, #000); transform: none; }
+
+/* 5) 面板标题层级：正文重量 600→500 更接近 Linear 的 quiet luxurious */
+.panel-title { font-weight: 600; font-size: 13px; letter-spacing: -0.2px; }
+
+/* 6) 卡片 hover 一致性：统一 lift + hairline 强化，不用阴影突变 */
+.proj-card, .board-card { border: 1px solid var(--stroke-soft); }
+.proj-card:hover { border-color: var(--stroke); }
+
+/* 7) 运行状态灯呼吸统一：柔和 2s（与卡片运行灯同频） */
+.rt-led { animation: pulse 2s infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--ok) 12%, transparent); } }
+
+/* 8) chip 选中态：表面提升（Linear: selected = surface lift）而非纯色块 */
+.chip-active { box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 22%, transparent); }
+.chip.chip-running.chip-active { box-shadow: 0 2px 8px color-mix(in srgb, var(--ok) 25%, transparent); }
+
+/* 9) 滚动条 hairline 化（Linear: 1px hairline 美学） */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-thumb { border-radius: 999px; }
+
+/* 10) 数字等宽 + 略小：所有计量值（内存/端口/评分）统一 mono 11px */
+.rt-mem, .port-mem, .svc-mem, .ex-dim-val { font-variant-numeric: tabular-nums; }

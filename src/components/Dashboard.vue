@@ -8,6 +8,7 @@ import ProjectCard from './ProjectCard.vue';
 import ProjectRow from './ProjectRow.vue';
 import SysBar from './SysBar.vue';
 import WorkPanel from './WorkPanel.vue';
+import RuntimePanel from './RuntimePanel.vue';
 import AllChanges from './AllChanges.vue';
 import AddProjectModal from '../modals/AddProjectModal.vue';
 import EditProjectModal from '../modals/EditProjectModal.vue';
@@ -146,6 +147,7 @@ function runFromCard(proj, script) {
 
   <SysBar />
   <WorkPanel @open-detail="emit('open-detail', $event)" />
+  <RuntimePanel @open-detail="emit('open-detail', $event)" />
 
   <div class="toolbar">
     <div class="tag-chips">

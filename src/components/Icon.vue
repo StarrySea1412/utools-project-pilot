@@ -9,6 +9,7 @@ import {
   Undo2, ArrowLeft, ArrowDown, ArrowUp, Moon, CircleCheck, CircleDot, Inbox, GitBranch,
   Bot, Folder, File, Eye, ListChecks, ScrollText, Wrench, ShieldAlert, CalendarClock,
   DatabaseBackup, Download, Upload, FileWarning, Pin, Keyboard,
+  RotateCw, Activity, ChartNoAxesColumn, Scale, ExternalLink,
 } from 'lucide-vue-next';
 
 const MAP = {
@@ -19,6 +20,7 @@ const MAP = {
   Undo2, ArrowLeft, ArrowDown, ArrowUp, Moon, CircleCheck, CircleDot, Inbox, GitBranch,
   Bot, Folder, File, Eye, ListChecks, ScrollText, Wrench, ShieldAlert, CalendarClock,
   DatabaseBackup, Download, Upload, FileWarning, Pin, Keyboard,
+  RotateCw, Activity, ChartNoAxesColumn, Scale, ExternalLink,
 };
 
 const props = defineProps({

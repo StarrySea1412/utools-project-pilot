@@ -91,21 +91,29 @@ const onDragStart = (t, ev) => ev.dataTransfer.setData('text/pilot-todo', t.id);
     <p v-if="!store.todos.length" class="hint" style="padding: 4px 10px">暂无待办。随手记，回车添加。</p>
   </template>
 
-  <!-- 四象限视图 -->
+  <!-- 四象限看板（Linear 式列卡） -->
   <div v-else class="quad-grid">
-    <div v-for="(items, qi) in byQuad" :key="qi" class="quad-cell" :class="['q' + qi, { dragover: dragOver === qi }]"
+    <div v-for="(items, qi) in byQuad" :key="qi" class="quad-cell board-col" :class="['q' + qi, { dragover: dragOver === qi }]"
          @dragover.prevent @dragenter.prevent="dragOver = qi" @dragleave="dragOver === qi && (dragOver = null)" @drop="onDrop(qi, $event)">
       <div class="quad-head">
         <span class="q-name">{{ QUADS[qi].name }}</span>
         <span class="q-hint">{{ items.length ? items.length + ' 项' : QUADS[qi].hint }}</span>
       </div>
-      <div v-for="t in items" :key="t.id" class="todo-mini-row" draggable="true" @dragstart="onDragStart(t, $event)">
-        <button class="todo-check" title="完成" @click="toggleTodo(t.id)"></button>
-        <span class="todo-text" :title="t.text + (t.projectId ? ' · ' + projName(t.projectId) : '')">{{ t.text }}</span>
-        <span v-if="t.projectId" class="mini-tag mono" :title="'关联项目：' + projName(t.projectId) + '，点击打开'" @click="goProject(t.projectId)">{{ projName(t.projectId) }}</span>
-        <button class="icon-btn sm" title="删除" @click="removeTodo(t.id)"><Icon name="X" :size="12" /></button>
+      <div class="board-cards">
+        <div v-for="t in items" :key="t.id" class="board-card" draggable="true" @dragstart="onDragStart(t, $event)">
+          <div class="board-card-head">
+            <button class="todo-check" title="完成" @click="toggleTodo(t.id)"></button>
+            <span class="todo-text" :title="t.text">{{ t.text }}</span>
+          </div>
+          <div class="board-card-foot">
+            <span v-if="t.projectId" class="mini-tag mono" :title="'关联项目：' + projName(t.projectId) + '，点击打开'" @click="goProject(t.projectId)">{{ projName(t.projectId) }}</span>
+            <span class="spacer"></span>
+            <span class="c-time">{{ timeAgo(t.createdAt) }}</span>
+            <button class="icon-btn sm" title="删除" @click="removeTodo(t.id)"><Icon name="X" :size="11" /></button>
+          </div>
+        </div>
+        <span v-if="!items.length" class="q-empty">拖待办到这里</span>
       </div>
-      <span v-if="!items.length" class="q-empty">拖待办到这里</span>
     </div>
   </div>
   <p v-if="view === 'quad' && done.length" class="hint" style="padding: 4px 10px 0">已完成 {{ done.length }} 项（列表视图可查看）</p>

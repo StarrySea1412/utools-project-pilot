@@ -449,6 +449,24 @@ async function sysPorts() {
       });
     }
   }
+  // 内部脚本进程树：从 shell 根 pid 沿 ppid 收全后代（cmd.exe → 工具 → 实际监听进程可能隔多层）
+  const descendantsOf = new Map();
+  const pidPpid = new Map();
+  for (const [, info] of procInfoCache) if (info.ppid != null) pidPpid.set(info.pid, info.ppid);
+  for (const intProc of activeInternal) {
+    const set = new Set([intProc.pid]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const [pid, ppid] of pidPpid) {
+        if (set.has(ppid) && !set.has(pid)) { set.add(pid); grew = true; }
+      }
+      for (const [, info] of procInfoCache) {
+        if (set.has(info.ppid) && !set.has(info.pid)) { set.add(info.pid); grew = true; }
+      }
+    }
+    descendantsOf.set(intProc.pid, set);
+  }
 
   const result = [];
   for (const [port, pidsSet] of rawPorts.entries()) {
@@ -462,9 +480,9 @@ async function sysPorts() {
     let internalCwd = null;
 
     for (const intProc of activeInternal) {
-      const matchDirect = pids.includes(intProc.pid);
-      const matchParent = processes.some((pr) => pr.ppid === intProc.pid);
-      if (matchDirect || matchParent) {
+      const tree = descendantsOf.get(intProc.pid) || new Set([intProc.pid]);
+      const inTree = pids.some((pid) => tree.has(pid));
+      if (inTree) {
         isInternal = true;
         internalScriptName = intProc.scriptName;
         internalCwd = intProc.cwd;
