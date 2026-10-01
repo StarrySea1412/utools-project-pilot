@@ -142,6 +142,10 @@ index 3a2f1bc..8d91e2f 100644
     openPath() {}, showItemInFolder() {}, openInBrowser() {}, copyText() {},
     notify() {}, isDark() { return window.matchMedia('(prefers-color-scheme: dark)').matches; },
     openTerminal() {},
+    // 用编辑器打开（mock：演示环境只回显，不真启动）
+    openWithEditor(cmd) { console.log('[mock] openWithEditor:', cmd); return true; },
+    // PATH 探测（mock：假设装了 VS Code，演示「自动探测」路径）
+    hasInPath(cmd, isWinTarget) { return cmd === 'code'; },
     async killPid() { return { ok: true }; },
     git: {
       async status(path) { return JSON.parse(JSON.stringify(fakeStatuses[projById(path).id] || fakeStatuses['prj_demo2'])); },

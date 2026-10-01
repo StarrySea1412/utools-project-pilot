@@ -8,6 +8,8 @@ const DEFAULT_SETTINGS = {
   cardView: 'card',      // 仪表盘密度：card 卡片 / compact 紧凑 / list 列表
   sort: 'recent',        // 仪表盘排序：recent 最近使用 / updated 最近更新 / dirty 变更最多 / tag 按标签 / name 名称
   ai: { baseUrl: 'https://api.openai.com/v1', apiKey: '', model: 'gpt-4o-mini' },
+  editorCmd: '',         // 「用编辑器打开」自定义命令模板，{path} 占位（如 code {path}）；空 = 自动探测
+  archive: [],           // 归档项目路径（路径去重，项目本体从列表移除时不删数据）
   commitPrompt: '',
   analysisModes: [
     { id: 'summary', name: '变更总结', builtin: true, prompt: '根据这批提交记录，总结本阶段完成了哪些工作。用简体中文，输出 3~6 条要点，每条一句话，突出新增能力和重要修复。' },
@@ -254,6 +256,25 @@ export function removeProject(id) {
   saveProjects();
 }
 
+// ---------- 项目归档：移出仪表盘但保留配置（脚本/任务/备忘都在），可随时恢复 ----------
+export function archiveProject(id) {
+  const p = store.projects.find((x) => x.id === id);
+  if (!p) return false;
+  p.archived = true;
+  saveProjects();
+  return true;
+}
+export function unarchiveProject(id) {
+  const p = store.projects.find((x) => x.id === id);
+  if (!p) return false;
+  p.archived = false;
+  if ((p.lastOpened || 0) === 0) p.lastOpened = Date.now(); // 恢复后浮到最近使用前列
+  saveProjects();
+  return true;
+}
+export const activeProjects = () => store.projects.filter((p) => !p.archived);
+export const archivedProjects = () => store.projects.filter((p) => p.archived);
+
 // ---------- AI ----------
 export function ai(messages) {
   const { baseUrl, apiKey, model } = store.settings.ai || {};
@@ -393,6 +414,7 @@ export async function execAndLog(proj, task) {
 function tick() {
   const now = Date.now();
   for (const proj of store.projects) {
+    if (proj.archived) continue; // 归档项目：自动任务暂停（含 boot 型），恢复后重新生效
     for (const task of proj.tasks || []) {
       if (taskDue(task, now)) {
         if (task.type === 'boot') taskState.bootedIds.add(task.id);
@@ -435,7 +457,7 @@ let refreshing = false;
 export async function refreshAllGit(force = false) {
   if (refreshing) return;
   refreshing = true;
-  const queue = store.projects.slice();
+  const queue = store.projects.filter((p) => !p.archived); // 归档项目不刷 Git 态势
   const worker = async () => {
     while (queue.length) {
       const p = queue.shift();
@@ -460,7 +482,7 @@ export async function patrolOnce(force = false) {
   patrolState.done = true;
   try { await refreshAllGit(force); } catch (e) { return; }
   const now = Date.now();
-  for (const proj of store.projects) {
+  for (const proj of activeProjects()) {
     const st = store.gitCache[proj.id]?.status;
     if (!st) continue;
     // 落后远程：同一项目一小时只提醒一次

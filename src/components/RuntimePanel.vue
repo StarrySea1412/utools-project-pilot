@@ -2,7 +2,7 @@
 // RuntimePanel.vue — 运行时面板（Lazydocker 式）：全局视角汇总所有项目正在跑的服务进程
 // 内部脚本 + 外部探测，一行一进程：状态灯 / 名称 / 项目 / 端口 / 内存 / 日志 / 重启 / 停止
 import { computed, ref } from 'vue';
-import { store, stopScript, startScript, projectServices } from '../store.js';
+import { store, stopScript, startScript, projectServices, activeProjects } from '../store.js';
 import { toast } from '../ui.js';
 import { portUrl, fmtMem, isHttpPort } from '../ports.js';
 import Icon from './Icon.vue';
@@ -14,7 +14,7 @@ const collapsed = ref(false); // 面板折叠状态
 // 汇总：每个项目 × projectServices（内部 + 外部）
 const allServices = computed(() => {
   const out = [];
-  for (const p of store.projects) {
+  for (const p of activeProjects()) {
     for (const s of projectServices(p)) {
       out.push({ ...s, project: p });
     }

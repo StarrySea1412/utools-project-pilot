@@ -1,7 +1,7 @@
 <script setup>
 // AllChanges.vue — 跨项目聚合变更总览：回答「我今天改了哪些东西」
 import { computed, ref, onMounted } from 'vue';
-import { store } from '../store.js';
+import { store, activeProjects } from '../store.js';
 import { toast, closeModal } from '../ui.js';
 import Icon from './Icon.vue';
 
@@ -13,7 +13,7 @@ const fresh = ref({});
 
 async function load() {
   loading.value = true;
-  const entries = await Promise.all(store.projects.map(async (p) => {
+  const entries = await Promise.all(activeProjects().map(async (p) => {
     try {
       const st = await window.pilot.git.status(p.path);
       return [p.id, st];
@@ -24,7 +24,7 @@ async function load() {
 }
 onMounted(load);
 
-const dirtyProjects = computed(() => store.projects
+const dirtyProjects = computed(() => activeProjects()
   .filter((p) => fresh.value[p.id]?.dirty > 0)
   .map((p) => ({ proj: p, st: fresh.value[p.id] }))
   .sort((a, b) => b.st.dirty - a.st.dirty));

@@ -1,8 +1,9 @@
 <script setup>
 // CommandPalette.vue — Ctrl+K 命令面板：项目 / 脚本 / 导航 / 设置 模糊搜索
 import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
-import { store, saveProjects, startScript, refreshAllGit } from '../store.js';
+import { store, saveProjects, startScript, refreshAllGit, activeProjects } from '../store.js';
 import { toast, openModal, closeModal, applyTheme } from '../ui.js';
+import { buildOpenCommand } from '../editors.js';
 import Icon from './Icon.vue';
 import AddProjectModal from '../modals/AddProjectModal.vue';
 import SettingsModal from '../modals/SettingsModal.vue';
@@ -20,6 +21,7 @@ const listEl = ref(null);
 const NAV_CMDS = [
   { id: 'nav:dashboard', icon: 'LayoutGrid', label: '返回仪表盘', hint: '导航', run: () => { store.view = 'dashboard'; store.activeProjectId = null; refreshAllGit(); } },
   { id: 'nav:allchanges', icon: 'GitBranch', label: '全部项目的未提交变更', hint: '导航', run: () => openModal(AllChanges, {}, { title: '全部项目的未提交变更', wide: true }) },
+  { id: 'nav:archive', icon: 'Inbox', label: '归档管理（设置）', hint: '导航', run: () => openModal(SettingsModal, {}, { title: '设置', wide: true }) },
   { id: 'nav:weekly', icon: 'ScrollText', label: 'AI 周报（近 7 天）', hint: '导航', run: () => openModal(WeeklyReport, {}, { title: 'AI 周报（全部项目 · 近 7 天）', wide: true }) },
   { id: 'nav:workpanel', icon: 'Compass', label: '展开/收起工作台', hint: '导航', run: () => { store.workOpen = !store.workOpen; } },
   { id: 'nav:theme', icon: 'SunMoon', label: '切换深浅主题', hint: '设置', run: () => { const cur = document.documentElement.dataset.theme; store.settings.theme = cur === 'dark' ? 'light' : 'dark'; saveSettingsQuiet(); applyTheme(); } },
@@ -30,12 +32,30 @@ const NAV_CMDS = [
 function saveSettingsQuiet() { import('../store.js').then((m) => m.saveSettings()); }
 
 // 项目与脚本命令在计算时按 store 生成
+let editorCache = '';
+function openInEditor(p) {
+  const tpl = (store.settings.editorCmd || '').trim();
+  if (tpl) {
+    const cmd = buildOpenCommand(tpl, p.path);
+    if (cmd) { window.pilot.openWithEditor(cmd); toast('已在编辑器中打开', 'ok'); return; }
+  }
+  if (!editorCache) {
+    editorCache = window.pilot.hasInPath?.('code', true) ? 'code {path}' : '';
+    if (!editorCache) { toast('未检测到编辑器，请在设置中配置「编辑器命令」', 'warn'); return; }
+  }
+  const cmd = buildOpenCommand(editorCache, p.path);
+  if (cmd) { window.pilot.openWithEditor(cmd); toast('已在 VS Code 中打开', 'ok'); }
+}
 function buildCommands() {
   const out = [];
-  for (const p of store.projects) {
+  for (const p of activeProjects()) {
     out.push({
       id: 'proj:' + p.id, icon: 'Folder', label: p.name, hint: '项目 · ' + (p.tags?.[0] || '打开'),
       run: () => { emit('open-detail', p.id); },
+    });
+    out.push({
+      id: 'editor:' + p.id, icon: 'ExternalLink', label: `用编辑器打开：${p.name}`, hint: '编辑器',
+      run: () => { openInEditor(p); },
     });
     out.push({
       id: 'explore:' + p.id, icon: 'Compass', label: `探索：${p.name}`, hint: 'AI 完成度评估 · 功能推荐',

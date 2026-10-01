@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
-import { store, saveSettings, removeProject, startScript, stopScript, refreshAllGit, sortProjects, togglePin, isProjectRunning } from '../store.js';
+import { store, saveSettings, removeProject, startScript, stopScript, refreshAllGit, sortProjects, togglePin, isProjectRunning, archiveProject, unarchiveProject, activeProjects, archivedProjects } from '../store.js';
 import { toast, openModal, confirmBox, applyTheme } from '../ui.js';
+import { buildOpenCommand } from '../editors.js';
 import Icon from './Icon.vue';
 import Select from './Select.vue';
 import ProjectCard from './ProjectCard.vue';
@@ -26,7 +27,7 @@ const tags = computed(() => {
 const runningCount = computed(() => store.projects.filter((p) => isProjectRunning(p)).length);
 
 const visibleProjects = computed(() => {
-  let list = store.projects.slice();
+  let list = activeProjects().slice();
   if (store.tagFilter === '__running__') {
     list = list.filter((p) => isProjectRunning(p));
   } else if (store.tagFilter !== '全部') {
@@ -89,6 +90,24 @@ function openAllChanges() {
 
 function openProject(id) { emit('open-detail', id); }
 
+// ---------- 用编辑器打开：优先自定义命令，否则取探测到的第一个编辑器 ----------
+const editorMenuTitle = computed(() => store.settings.editorCmd ? '用编辑器打开' : '用编辑器打开（自动探测）');
+function openInEditor(proj) {
+  const tpl = (store.settings.editorCmd || '').trim();
+  if (tpl) {
+    const cmd = buildOpenCommand(tpl, proj.path);
+    if (cmd) { window.pilot.openWithEditor(cmd); toast('已在编辑器中打开', 'ok'); return; }
+  }
+  // 无自定义：后台探测 PATH（首次点击时探测一次并缓存到会话）
+  if (!editorCache) {
+    editorCache = window.pilot.hasInPath('code', true) ? 'code {path}' : '';
+    if (!editorCache) { toast('未检测到编辑器，请在设置中配置「编辑器命令」', 'warn'); return; }
+  }
+  const cmd = buildOpenCommand(editorCache, proj.path);
+  if (cmd) { window.pilot.openWithEditor(cmd); toast('已在 VS Code 中打开', 'ok'); }
+}
+let editorCache = '';
+
 function cardMenu(proj, ev) {
   // 简单实现：使用原生右键式菜单弹层
   const m = document.createElement('div');
@@ -96,10 +115,12 @@ function cardMenu(proj, ev) {
   m.innerHTML = `
     <button data-m="pin">${proj.pinned ? '取消置顶' : '置顶项目'}</button>
     <button data-m="edit">编辑项目</button>
+    <button data-m="editor">${editorMenuTitle.value}</button>
     <button data-m="folder">打开文件夹</button>
     <button data-m="terminal">在终端打开</button>
     <button data-m="explorer">定位到目录</button>
-    <hr><button data-m="del" class="danger">移除项目</button>`;
+    <hr><button data-m="archive">${proj.archived ? '取消归档' : '归档项目'}</button>
+    <button data-m="del" class="danger">移除项目</button>`;
   document.body.appendChild(m);
   const r = ev.target.getBoundingClientRect();
   m.style.top = (r.bottom + 6) + 'px';
@@ -114,7 +135,12 @@ function cardMenu(proj, ev) {
     if (b.dataset.m === 'edit') openModal(EditProjectModal, { project: proj }, { title: '编辑项目' });
     if (b.dataset.m === 'folder') window.pilot.openPath(proj.path);
     if (b.dataset.m === 'terminal') window.pilot.openTerminal(proj.path);
+    if (b.dataset.m === 'editor') openInEditor(proj);
     if (b.dataset.m === 'explorer') window.pilot.showItemInFolder(proj.path);
+    if (b.dataset.m === 'archive') {
+      if (proj.archived) { unarchiveProject(proj.id); toast('已恢复显示', 'ok'); }
+      else { archiveProject(proj.id); toast(`已归档「${proj.name}」——设置 → 归档管理可恢复`, 'ok'); }
+    }
     if (b.dataset.m === 'del') confirmBox('移除项目', `确定从列表移除「${proj.name}」吗？<br><small>不会删除磁盘上的文件。</small>`,
       () => { removeProject(proj.id); toast('已移除', 'ok'); });
   });

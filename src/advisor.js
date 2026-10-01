@@ -1,12 +1,12 @@
 // advisor.js — 领航建议：规则引擎 + AI 增强
-import { store, activeProject, projectPorts } from './store.js';
+import { store, activeProject, projectPorts, activeProjects } from './store.js';
 
 // 每条建议：{ id, icon, text, sub, level(0 提示/1 关注/2 紧急), projectId, action: {type, ...} }
 // action.type: git(打开详情Git页) | open(打开URL) | detail | console | none
 
 export function buildSuggestions() {
   const out = [];
-  for (const p of store.projects) {
+  for (const p of activeProjects()) {
     const st = store.gitCache[p.id]?.status;
     const running = (p.scripts || []).filter((s) => s.persistent && store.procHandles[s.id]?.running);
     const failedTask = (p.tasks || []).find((t) => t.log?.[0] && !t.log[0].ok);
@@ -63,9 +63,9 @@ export function buildSuggestions() {
       });
     }
   }
-  const totalDirty = store.projects.reduce((n, p) => n + (store.gitCache[p.id]?.status?.dirty || 0), 0);
+  const totalDirty = activeProjects().reduce((n, p) => n + (store.gitCache[p.id]?.status?.dirty || 0), 0);
   const ports = store.sys?.ports || [];
-  if (!totalDirty && store.projects.length) {
+  if (!totalDirty && activeProjects().length) {
     out.push({
       id: 'clean', icon: 'CircleCheck', level: 0,
       text: '所有项目工作区干净', sub: `当前系统共 ${ports.length} 个 TCP 端口在监听`,
@@ -87,8 +87,8 @@ export async function aiSuggestions() {
 const AI_ICONS = ['Pencil', 'ArrowDown', 'ArrowUp', 'CircleDot', 'TriangleAlert', 'Moon', 'Zap', 'Timer', 'Wrench', 'ShieldAlert', 'CalendarClock', 'Sparkles'];
 
 export async function aiAdvice() {
-  // 1) 组织上下文：项目态势 + 待办 + 最近提交主题 + 失败任务 + 端口
-  const lines = store.projects.map((p) => {
+  // 1) 组织上下文：项目态势 + 待办 + 最近提交主题 + 失败任务 + 端口（归档项目不进 AI 上下文）
+  const lines = activeProjects().map((p) => {
     const st = store.gitCache[p.id]?.status;
     const running = (p.scripts || []).filter((s) => s.persistent && store.procHandles[s.id]?.running).map((s) => s.name);
     const idleDays = Math.floor((Date.now() - (p.lastOpened || p.createdAt || Date.now())) / 864e5);
@@ -103,9 +103,7 @@ export async function aiAdvice() {
 
   let commits = '';
   try {
-    const names = {};
-    store.projects.forEach((p) => { names[p.name] = true; });
-    const logs = await Promise.all(store.projects.slice(0, 8).map(async (p) => {
+    const logs = await Promise.all(activeProjects().slice(0, 8).map(async (p) => {
       try {
         const list = await window.pilot.git.log(p.path, 3);
         return list.map((c) => `${p.name}: ${c.subject}`).join('\n');
@@ -134,7 +132,7 @@ export async function aiAdvice() {
 
   // 2) 解析：容错裁出 JSON，校验字段并回填 projectId
   const parsed = parseAdviceJson(raw);
-  const byName = new Map(store.projects.map((p) => [p.name, p.id]));
+  const byName = new Map(activeProjects().map((p) => [p.name, p.id]));
   const items = parsed.items.slice(0, 6).map((it, i) => {
     const projectId = byName.get(it.project) || null;
     let action = { type: 'none' };

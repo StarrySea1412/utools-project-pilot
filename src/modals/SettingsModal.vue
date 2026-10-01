@@ -1,7 +1,8 @@
 <script setup>
 import { ref } from 'vue';
-import { store, saveSettings, exportAll, importAll } from '../store.js';
+import { store, saveSettings, exportAll, importAll, archivedProjects, unarchiveProject } from '../store.js';
 import { toast, closeModal, openModal, confirmBox, applyTheme } from '../ui.js';
+import { buildOpenCommand } from '../editors.js';
 import ModeModal from './ModeModal.vue';
 import Icon from '../components/Icon.vue';
 import Select from '../components/Select.vue';
@@ -11,6 +12,7 @@ const baseUrl = ref(ai.baseUrl || '');
 const apiKey = ref(ai.apiKey || '');
 const model = ref(ai.model || '');
 const commitPrompt = ref(store.settings.commitPrompt || '');
+const editorCmd = ref(store.settings.editorCmd || '');
 const theme = ref(store.settings.theme || 'auto');
 const testResult = ref('');
 const testing = ref(false);
@@ -20,6 +22,7 @@ function save() {
   store.settings.ai.apiKey = apiKey.value.trim();
   store.settings.ai.model = model.value.trim() || store.settings.ai.model;
   store.settings.commitPrompt = commitPrompt.value.trim();
+  store.settings.editorCmd = editorCmd.value.trim();
   store.settings.theme = theme.value;
   saveSettings();
   applyTheme();
@@ -71,6 +74,22 @@ function onImportClick() {
 function onReplaceClick() {
   confirmBox('全量覆盖导入', '用备份文件替换本地<b>全部</b>数据（项目/设置/待办），操作不可撤销。确定继续？', () => doImport('replace'));
 }
+
+// ---------- 编辑器 ----------
+const editorTestResult = ref('');
+function testEditor() {
+  const cmd = buildOpenCommand(editorCmd.value, 'D:\\');
+  if (!cmd) { editorTestResult.value = '✕ 先填写命令（含 {path}）'; return; }
+  window.pilot.openWithEditor(cmd);
+  editorTestResult.value = '✓ 已执行，检查编辑器是否打开';
+}
+
+// ---------- 归档管理 ----------
+const archived = () => archivedProjects();
+function restore(id, name) {
+  unarchiveProject(id);
+  toast(`已恢复「${name}」`, 'ok');
+}
 </script>
 
 <template>
@@ -113,6 +132,30 @@ function onReplaceClick() {
         </li>
       </ul>
       <button class="btn btn-ghost" @click="addMode"><Icon name="Plus" :size="13" /> 添加自定义模式</button>
+    </section>
+
+    <section class="set-section">
+      <h4><Icon name="ExternalLink" :size="13" /> 编辑器命令</h4>
+      <label class="field"><span class="f-label">自定义命令</span>
+        <input v-model="editorCmd" class="input mono" placeholder="code {path}（{path} 为项目路径占位）">
+        <span class="f-hint">留空自动探测 PATH 里的 VS Code / Cursor 等。JetBrains 系可填实际路径，如 D:/apps/WebStorm/bin/webstorm64.exe {path}</span>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-ghost" @click="testEditor">试一下</button>
+        <span class="hint" :class="{ 'err-text': editorTestResult.startsWith('✕') }">{{ editorTestResult }}</span>
+      </div>
+    </section>
+
+    <section v-if="archived().length" class="set-section">
+      <h4><Icon name="Inbox" :size="13" /> 归档项目（{{ archived().length }}）</h4>
+      <ul class="mode-manage">
+        <li v-for="p in archived()" :key="p.id">
+          <span>{{ p.name }}</span>
+          <span class="mini-tag mono">{{ p.path.length > 34 ? p.path.slice(0, 32) + '…' : p.path }}</span>
+          <button class="icon-btn" title="恢复显示" @click="restore(p.id, p.name)"><Icon name="RotateCw" :size="13" /></button>
+        </li>
+      </ul>
+      <span class="f-hint">归档的项目移出仪表盘但保留脚本 / 任务 / 备忘，随时可恢复。</span>
     </section>
 
     <section class="set-section">

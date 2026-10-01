@@ -1,6 +1,6 @@
 // preload.js — Seewrok (Seewrok)
 // Node 桥接层：Git / 脚本进程 / 文件系统 / uTools DB / AI(OpenAI 兼容)
-const { execFile, spawn } = require('child_process');
+const { execFile, execFileSync, spawn } = require('child_process');
 const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
@@ -645,6 +645,25 @@ if (typeof window !== 'undefined') {
         p.on('error', () => { const q = spawn('xterm', [], { cwd, detached: true, stdio: 'ignore' }); q.unref(); });
         p.unref();
       }
+    },
+    // 用编辑器打开：cmd 为完整命令行（模板已替换 {path}），经 shell 解析
+    openWithEditor(cmd) {
+      const { file, args } = shellArgs(cmd);
+      const p = spawn(file, args, { windowsHide: true, detached: true, stdio: 'ignore' });
+      p.on('error', () => {});
+      p.unref();
+      return true;
+    },
+    // PATH 探测：Windows 下 x.cmd 需要连 .cmd 扩展一起试（where 会命中 code.cmd）
+    hasInPath(cmd, isWinTarget) {
+      const exe = isWinTarget ? [cmd, `${cmd}.cmd`, `${cmd}.exe`] : [cmd];
+      for (const name of exe) {
+        try {
+          const r = execFileSync(isWinTarget ? 'where.exe' : 'which', [name], { timeout: 3000, windowsHide: true, stdio: 'pipe' });
+          if (String(r || '').trim()) return true;
+        } catch (e) {}
+      }
+      return false;
     },
     // git
     git: {

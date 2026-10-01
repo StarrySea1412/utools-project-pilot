@@ -2,6 +2,7 @@
 import { computed, ref, watch, onMounted } from 'vue';
 import { store, activeProject, removeProject, startScript } from '../store.js';
 import { toast, openModal, confirmBox, projectIconStyle } from '../ui.js';
+import { buildOpenCommand } from '../editors.js';
 import TabOverview from './TabOverview.vue';
 import TabScripts from './TabScripts.vue';
 import TabGit from './TabGit.vue';
@@ -41,6 +42,23 @@ function back() {
 }
 const openPath = (p) => window.pilot.openPath(p);
 const openTerminal = (p) => window.pilot.openTerminal(p);
+// 用编辑器打开：自定义命令优先，否则探测 PATH 里的 VS Code
+let editorCache = '';
+function openInEditor() {
+  const proj = proj.value;
+  if (!proj) return;
+  const tpl = (store.settings.editorCmd || '').trim();
+  if (tpl) {
+    const cmd = buildOpenCommand(tpl, proj.path);
+    if (cmd) { window.pilot.openWithEditor(cmd); toast('已在编辑器中打开', 'ok'); return; }
+  }
+  if (!editorCache) {
+    editorCache = window.pilot.hasInPath?.('code', true) ? 'code {path}' : '';
+    if (!editorCache) { toast('未检测到编辑器，请在设置中配置「编辑器命令」', 'warn'); return; }
+  }
+  const cmd = buildOpenCommand(editorCache, proj.path);
+  if (cmd) { window.pilot.openWithEditor(cmd); toast('已在 VS Code 中打开', 'ok'); }
+}
 </script>
 
 <template>
@@ -57,6 +75,7 @@ const openTerminal = (p) => window.pilot.openTerminal(p);
       </div>
       <span v-if="framework" class="mini-tag mono fw-tag">{{ framework }}</span>
       <div class="top-actions">
+        <button class="icon-btn" title="用编辑器打开" @click="openInEditor"><Icon name="ExternalLink" :size="14" /></button>
         <button class="icon-btn" title="打开文件夹" @click="openPath(proj.path)"><Icon name="FolderOpen" :size="14" /></button>
         <button class="icon-btn" title="打开终端" @click="openTerminal(proj.path)"><Icon name="Terminal" :size="14" /></button>
         <button class="icon-btn" title="编辑项目" @click="openModal(EditProjectModal, { project: proj }, { title: '编辑项目' })"><Icon name="Pencil" :size="14" /></button>
