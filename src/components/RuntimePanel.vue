@@ -4,7 +4,7 @@
 import { computed, ref } from 'vue';
 import { store, stopScript, startScript, projectServices } from '../store.js';
 import { toast } from '../ui.js';
-import { portUrl, fmtMem } from '../ports.js';
+import { portUrl, fmtMem, isHttpPort } from '../ports.js';
 import Icon from './Icon.vue';
 
 const emit = defineEmits(['open-detail']);
@@ -77,6 +77,8 @@ async function killExternal(s) {
 }
 function openUrl(s) { if (s.url) window.pilot.openInBrowser(s.url); }
 function toProject(id) { emit('open-detail', id); }
+// HTTP 服务的探活结果（store 每 15s 刷新；无数据不显示）
+const healthOf = (s) => (s.port && isHttpPort(s.port) ? (store.sys?.health?.[s.port] || null) : null);
 </script>
 
 <template>
@@ -98,6 +100,8 @@ function toProject(id) { emit('open-detail', id); }
         <span class="mini-tag" :class="s.isInternal ? 'svc' : ''">{{ s.isInternal ? '内部' : '外部' }}</span>
         <button v-if="s.port" class="rt-port mono" :title="s.url ? '点击打开 ' + s.url : ''" :class="{ clickable: s.url }" @click="openUrl(s)">:{{ s.port }}</button>
         <span v-else class="rt-port mono muted">:—</span>
+        <span v-if="healthOf(s)" class="rt-health" :class="healthOf(s).ok ? 'up' : 'down'"
+              :title="healthOf(s).ok ? `探活正常（HTTP ${healthOf(s).code || '—'}），延迟 ${healthOf(s).ms}ms` : '探活失败：无响应或超时'">{{ healthOf(s).ok ? healthOf(s).ms + 'ms' : '超时' }}</span>
         <span class="rt-mem mono">{{ s.mem ? fmtMem(s.mem) : '—' }}</span>
         <span class="spacer"></span>
         <button v-if="s.isInternal" class="icon-btn sm" title="查看日志" @click="toggleLog(s.project.id + ':' + (s.port || s.name))"><Icon :name="expanded[s.project.id + ':' + (s.port || s.name)] ? 'ChevronDown' : 'ChevronUp'" :size="12" /></button>
@@ -119,4 +123,7 @@ function toProject(id) { emit('open-detail', id); }
 .rt-kill { color: var(--err); }
 .rt-kill:hover { background: color-mix(in srgb, var(--err) 15%, transparent); border-radius: 7px; }
 .rt-kill.armed { background: var(--err); color: #fff; border-radius: 7px; padding: 0 8px; font-size: 11px; font-weight: 700; }
+.rt-health { font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; padding: 1px 7px; border-radius: 6px; }
+.rt-health.up { color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, transparent); }
+.rt-health.down { color: var(--err); background: color-mix(in srgb, var(--err) 12%, transparent); }
 </style>

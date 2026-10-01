@@ -205,6 +205,12 @@ index 3a2f1bc..8d91e2f 100644
           { port: 7681, pids: [22004], names: ['Code.exe'], mem: 220200960, commandLine: '', executablePath: 'C:/Users/user/AppData/Local/Programs/Microsoft VS Code/Code.exe', isInternal: false, processes: [{ pid: 22004, name: 'Code.exe', commandLine: '', executablePath: 'C:/Users/user/AppData/Local/Programs/Microsoft VS Code/Code.exe', ppid: null }] },
         ];
       },
+      // 探活（mock：全部存活，随机延迟；5173 模拟一次超时以展示红色态）
+      async probe(ports) {
+        return (ports || []).map((port) => (port === 5173
+          ? { port, ok: false, ms: 2500, error: 'timeout' }
+          : { port, ok: true, ms: 18 + Math.round(Math.random() * 46), code: 200 }));
+      },
     },
     // ---------- 项目身份识别（mock：无图标，按项目给技术栈演示） ----------
     async identify(p) {

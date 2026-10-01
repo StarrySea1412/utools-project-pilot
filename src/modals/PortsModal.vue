@@ -41,6 +41,9 @@ const displayedPorts = computed(() => {
   });
 });
 
+// 探活结果（store 每 15s 随端口扫描刷新；无数据时回退静态圆点）
+const healthOf = (p) => store.sys?.health?.[p.port] || null;
+
 function openPort(p) {
   if (p.isHttp) window.pilot.openInBrowser(`http://localhost:${p.port}`);
 }
@@ -108,7 +111,11 @@ async function kill(p) {
         <div class="pc-main">
           <div class="pc-line1">
             <span class="pc-service">{{ p.service || (p.names[0] || '未知进程').replace(/\.exe$/i, '') }}</span>
-            <span v-if="p.isHttp" class="pc-http-dot" title="HTTP 可访问"></span>
+            <span v-if="p.isHttp && healthOf(p)" class="pc-health" :class="healthOf(p).ok ? 'up' : 'down'"
+                  :title="healthOf(p).ok ? `探活正常（HTTP ${healthOf(p).code || '—'}），延迟 ${healthOf(p).ms}ms` : '探活失败：无响应或超时'">
+              <span class="pc-health-dot"></span>{{ healthOf(p).ok ? healthOf(p).ms + 'ms' : '超时' }}
+            </span>
+            <span v-else-if="p.isHttp" class="pc-http-dot" title="HTTP 可访问"></span>
             <span v-if="p.project" class="pc-proj" title="点击跳转至此项目概览" @click.stop="toProject(p.project.id)">
               <Icon name="Folder" :size="10" /> {{ p.project.name }}
             </span>
@@ -173,6 +180,14 @@ async function kill(p) {
 .pc-line1 { display: flex; align-items: center; gap: 7px; min-width: 0; }
 .pc-service { font-size: 12.5px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pc-http-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); flex-shrink: 0; }
+.pc-health {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+  font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums; font-family: var(--font);
+  padding: 1px 7px; border-radius: 6px;
+}
+.pc-health.up { color: var(--ok); background: color-mix(in srgb, var(--ok) 10%, transparent); }
+.pc-health.down { color: var(--err); background: color-mix(in srgb, var(--err) 12%, transparent); }
+.pc-health-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 .pc-proj {
   display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
   font-size: 11px; font-weight: 600; color: var(--accent);

@@ -1,6 +1,7 @@
 // store.js — Vue reactive 全局状态：项目、设置、Git 缓存、进程句柄、自动任务调度、AI
 import { reactive } from 'vue';
 import { detectServiceName, isHttpPort, portUrl, pathContains, normalizePath } from './ports.js';
+import { serviceTransitions } from './health.js';
 
 const DEFAULT_SETTINGS = {
   theme: 'auto',
@@ -502,7 +503,7 @@ export function setBackgroundPaused(v) {
 
 export function startSysMonitor() {
   if (!window.pilot?.sys) return;
-  store.sys = { mem: null, cpu: null, self: null, ports: [], portsLoading: false, portsError: '', memHistory: [], cpuHistory: [], selfHistory: [] };
+  store.sys = { mem: null, cpu: null, self: null, ports: [], portsLoading: false, portsError: '', memHistory: [], cpuHistory: [], selfHistory: [], health: {} };
   const pollFast = async () => {
     if (bgPaused) return;
     try {
@@ -525,14 +526,61 @@ export function startSysMonitor() {
     if (bgPaused) return;
     store.sys.portsLoading = true;
     try { store.sys.ports = await window.pilot.sys.ports(); store.sys.portsError = ''; }
-    catch (e) { store.sys.portsError = String(e.message || e); }
+    catch (e) { store.sys.portsError = String(e.message || e); store.sys.portsLoading = false; return; }
     store.sys.portsLoading = false;
+    refreshServiceHealth().catch(() => {});
   };
   sysPoll = { fast: pollFast, slow: pollSlow };
   pollFast();
   pollSlow();
   setInterval(pollFast, 3000);
   setInterval(pollSlow, 15000);
+}
+
+// ---------- 服务健康探测 + 外部服务上下线通知 ----------
+// HTTP 开发端口每轮探活（延迟/超时写入 store.sys.health，供端口弹窗与运行时面板显示）；
+// 外部服务（VSCode / 终端里启动的）从在线到消失 → 通知一次，重新出现即清除标记。
+// 内部脚本的崩溃由 procWatch 实时覆盖（更精准），这里只管外部服务。
+const healthState = { seen: {}, lastScanAt: 0 };
+
+export async function refreshServiceHealth() {
+  if (!window.pilot?.sys?.probe) return;
+  const httpPorts = (store.sys.ports || []).filter((p) => isHttpPort(p.port));
+  if (!httpPorts.length) {
+    store.sys.health = {};
+    // 全空扫描可能是 netstat 失灵：保住 seen 重建基线，等服务真下线时下一轮再通知
+    if (Object.keys(healthState.seen).length) healthState.lastScanAt = Date.now();
+    return;
+  }
+  let results;
+  try { results = await window.pilot.sys.probe(httpPorts.map((p) => p.port)); }
+  catch (e) { return; }
+  const health = {};
+  for (const r of results) health[r.port] = { ok: r.ok, ms: r.ms, code: r.code || 0, at: Date.now() };
+  store.sys.health = health;
+
+  const matched = [];
+  for (const p of httpPorts) {
+    if (p.isInternal) continue;
+    const proj = matchProjectForPort(p, store.projects);
+    if (!proj) continue;
+    matched.push({
+      key: `${proj.id}:${p.port}`,
+      projectId: proj.id,
+      port: p.port,
+      service: detectServiceName(p.commandLine, p.names, p.scriptName, p.port),
+    });
+  }
+  const now = Date.now();
+  // 两轮扫描间隔过长（收起恢复 / 休眠唤醒）：只重建基线不产事件，避免恢复瞬间刷屏
+  const baseline = !!healthState.lastScanAt && now - healthState.lastScanAt > 60000;
+  const { next, downs } = serviceTransitions(healthState.seen, matched, now, { baseline });
+  healthState.seen = next;
+  healthState.lastScanAt = now;
+  for (const d of downs) {
+    const proj = store.projects.find((x) => x.id === d.projectId);
+    pushNotification('TriangleAlert', `「${proj?.name || d.projectId}」的外部服务 ${d.service} :${d.port} 已停止响应`, { projectId: d.projectId });
+  }
 }
 
 // ---------- 服务与端口智能探测与项目归属 ----------

@@ -534,6 +534,27 @@ async function sysPorts() {
   return result.sort((a, b) => a.port - b.port);
 }
 
+// 服务健康探测：对 HTTP 开发端口发一次 GET /，收到任何响应头即算存活（404/500 也算活着），
+// 测量首包延迟。只连 127.0.0.1，不发往外部。
+function probePort(port, timeoutMs = 2500) {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const req = http.get({ host: '127.0.0.1', port, path: '/', agent: false, timeout: timeoutMs, headers: { Connection: 'close', 'User-Agent': 'Seewrok-Health/1.0' } }, (res) => {
+      const ms = Date.now() - started;
+      res.resume(); // 不读 body，排空后连接自动关闭
+      resolve({ ok: true, ms, code: res.statusCode || 0 });
+    });
+    req.on('timeout', () => { req.destroy(); resolve({ ok: false, ms: Date.now() - started, error: 'timeout' }); });
+    req.on('error', (e) => resolve({ ok: false, ms: Date.now() - started, error: e.code || String(e.message || e) }));
+  });
+}
+
+async function probePorts(ports, timeoutMs = 2500) {
+  const list = (ports || []).map((p) => Number(p)).filter((p) => p > 0 && p < 65536);
+  const results = await Promise.all(list.map((port) => probePort(port, timeoutMs)));
+  return list.map((port, i) => ({ port, ...results[i] }));
+}
+
 // ---------- 挂载 ----------
 if (typeof window !== 'undefined') {
   window.pilot = {
@@ -738,7 +759,7 @@ if (typeof window !== 'undefined') {
       return { icon, framework };
     },
     // system monitor
-    sys: { memory: sysMemory, cpu: sysCpu, ports: sysPorts, self: sysSelf },
+    sys: { memory: sysMemory, cpu: sysCpu, ports: sysPorts, self: sysSelf, probe: probePorts },
     // misc
     defaultCommitPrompt: '你是资深工程师。根据我提供的 git 暂存区变更，生成一条简洁规范的中文 commit message，遵循 Conventional Commits（如 feat/fix/docs/refactor/perf/chore/test(scope): 描述）。只输出消息本身，不要任何解释、代码块或引号，50 字以内。',
   };
