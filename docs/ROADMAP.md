@@ -109,8 +109,22 @@
 
 ### 下一步候选（按调研优先级）
 
-1. **Changelog / Release notes 生成**：按 tag 区间聚合提交 + AI 生成，复用现有 AI 管道
-2. **Git 深水区**（v1.3 遗留）：blame → 冲突辅助 → hunk 级暂存（成本递增）
+1. **Git 深水区**（v1.3 遗留）：blame → 冲突辅助 → hunk 级暂存（成本递增）
+2. **无 UI 看门进程**：独立小进程承载 24h 端口探活/自动任务/通知，UI 仍是 uTools 插件（桌面化路径 C）
+
+---
+
+## v1.12.0 · Changelog 生成（2026-10，已完成）
+
+主题：调研清单的最后一项轻量功能。Git 分析页新增 Changelog 面板——选 tag 区间，AI 写 Release Notes。
+
+| 事项 | 说明 |
+|---|---|
+| preload `git.tags` | `git tag --sort=-creatordate`，轻量/附注 tag 都收，带锚点 hash 供区间切片；mock 已同步（契约测试强制） |
+| 区间语义 | 与 `git log from..to` 一致：(from, to] 左开右闭；from 空 = 从头，to 空 = 最新提交；from=to 单条；反选保护。列表新→旧方向上的切片实现（纯函数 pickRange，测试 7 用例覆盖） |
+| AI 生成 | Conventional Commits 按 feat/fix/perf/… 分组排序给提示；输出面向使用者的分组 Release Notes；可填版本号；**AI 未配置/失败时离线兜底**：type 分组直接渲染，并提示错误原因 |
+| 入口 | Git 页 → AI 分析子页内嵌 Changelog 面板（分析结果下方）；复制 / 保存 .md |
+| 测试 | tests/changelog.test.mjs 12 用例：commitType 识别 / 分组排序 / merge 过滤 / 区间切片全语义 / 提示词 / 围栏解析 |
 
 ---
 

@@ -119,6 +119,15 @@ async function gitBranches(cwd) {
   });
 }
 
+// tag 列表（新→旧）：轻量与附注 tag 都要，附锚点 hash 供区间切片
+async function gitTags(cwd) {
+  const out = await git(cwd, ['tag', '--sort=-creatordate', '--format=%(refname:short)%00%(objectname)']);
+  return out.split('\n').filter(Boolean).map(l => {
+    const [name, hash] = l.split('\u0000');
+    return { name, hash: (hash || '').trim() };
+  });
+}
+
 async function gitCommit(cwd, message) {
   await git(cwd, ['commit', '-m', message]);
   return git(cwd, ['rev-parse', '--short', 'HEAD']);
@@ -671,6 +680,7 @@ if (typeof window !== 'undefined') {
       diffFile: gitDiffFile,
       log: gitLog,
       branches: gitBranches,
+      tags: gitTags,
       // 提交行引用标签（分支/tag，git graph 风）：hash -> [label…]
       async commitBranches(cwd, limit = 200) {
         const sep = '\u0001', fld = '\u0002';
