@@ -54,8 +54,20 @@ async function stop(s) {
   await stopScript(sc);
   toast(`已停止「${s.name}」`, 'ok');
 }
+// 结束外部进程：两击确认（与 PortsModal 一致），防误杀不相关进程
+const armed = ref(null);
+let armTimer = null;
+const killKey = (s) => `${s.project.id}:${s.pid || ''}`;
 async function killExternal(s) {
   if (!s.pid) return;
+  const key = killKey(s);
+  if (armed.value !== key) {
+    armed.value = key;
+    clearTimeout(armTimer);
+    armTimer = setTimeout(() => { armed.value = null; }, 2500);
+    return;
+  }
+  armed.value = null;
   try {
     const r = await window.pilot.killPid(s.pid);
     if (r && r.ok === false) { toast(`结束失败：${r.error || '未知错误'}`, 'err'); return; }
@@ -91,9 +103,20 @@ function toProject(id) { emit('open-detail', id); }
         <button v-if="s.isInternal" class="icon-btn sm" title="查看日志" @click="toggleLog(s.project.id + ':' + (s.port || s.name))"><Icon :name="expanded[s.project.id + ':' + (s.port || s.name)] ? 'ChevronDown' : 'ChevronUp'" :size="12" /></button>
         <button v-if="s.isInternal" class="icon-btn sm" title="重启" @click="restart(s)"><Icon name="RotateCw" :size="12" /></button>
         <button v-if="s.isInternal" class="icon-btn sm" title="停止" @click="stop(s)"><Icon name="Square" :size="12" /></button>
-        <button v-if="!s.isInternal && s.pid" class="icon-btn sm" title="结束进程" @click="killExternal(s)"><Icon name="X" :size="12" /></button>
+        <button v-if="!s.isInternal && s.pid" class="icon-btn sm rt-kill" :class="{ armed: armed === killKey(s) }"
+                :title="armed === killKey(s) ? '再点一次确认结束该进程树' : '结束该进程树（两击确认）'"
+                @click="killExternal(s)">
+          <template v-if="armed === killKey(s)">确认</template>
+          <Icon v-else name="X" :size="12" />
+        </button>
         <pre v-if="s.isInternal && expanded[s.project.id + ':' + (s.port || s.name)] && logOf(s)" class="rt-log mono">{{ logOf(s) }}</pre>
       </div>
     </div>
   </section>
 </template>
+
+<style scoped>
+.rt-kill { color: var(--err); }
+.rt-kill:hover { background: color-mix(in srgb, var(--err) 15%, transparent); border-radius: 7px; }
+.rt-kill.armed { background: var(--err); color: #fff; border-radius: 7px; padding: 0 8px; font-size: 11px; font-weight: 700; }
+</style>

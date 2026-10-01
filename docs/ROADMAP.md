@@ -91,3 +91,26 @@
 - uTools 插件机制限制后台常驻，「巡检自动化」只能在插件打开期间轮询——不要宣传为后台监控。
 - AI 功能依赖用户自备 key，成本与隐私提示要在设置页写清。
 - Git 操作（分支/stash/冲突）涉及写操作，preload 侧要做命令白名单与错误兜底，避免误伤用户仓库。
+
+---
+
+## v1.9.3 · 稳定性与轻量化（2026-10，已完成）
+
+主题：一轮代码审查 + 同类产品调研（Raycast / Fork·Sublime Merge / Dockge·Uptime Kuma / Dev Home）后的修正版，不加新功能，把缺陷清掉、把常驻开销压到最低。
+
+| 事项 | 说明 |
+|---|---|
+| git status rename 解析修正 | porcelain v2 重命名行 `2 R. … R100 <newPath>\t<origPath>` 旧实现把旧路径当 path、`renamed` 永远置不上；已修正并新增真实 git 仓库集成测试（tests/git-status.test.mjs） |
+| mock 契约测试修复 | 旧正则抽取实际抽出 0 个方法名、防漂移形同虚设；改为 VM 加载 preload 全量比对（54 项，含 git./sys./fs. 命名空间） |
+| 移除 tasklist 轮询 | 进程名/内存并入已有的 WMI 查询（WorkingSetSize）。实测 tasklist 单次 1.4~2.8s、每 30s 一次，是监控开销的 ~80%；合并后单次 ~0.65s，常驻开销约降 75% |
+| 插件收起暂停监控 | onPluginOut 暂停端口/系统/git 轮询，onPluginEnter 恢复并即时刷新一轮；崩溃监测与自动任务保持运行 |
+| 结束外部进程二次确认 | RuntimePanel 与 PortsModal 两击确认对齐 |
+| 其余修正 | GitChanges 增量更新 gitCache（不再丢 lastCommitAt）；重启脚本回收上一轮进程日志；Git 子页签与待办视图切换补图标 |
+
+### 下一步候选（按调研优先级）
+
+1. **服务健康探测**（v1.10 主打）：对监听中的 HTTP dev 端口做探活——状态点 + 响应延迟 + **外部服务下线也进通知**（目前只有插件内启动的脚本崩溃有通知）
+2. **「用编辑器打开」快捷动作**：VSCode / JetBrains / 自定义命令，命令面板同样可达
+3. **项目归档**：建议引擎已提示「考虑归档」，产品还没有归档动作
+4. **Changelog / Release notes 生成**：按 tag 区间聚合提交 + AI 生成，复用现有 AI 管道
+5. **Git 深水区**（v1.3 遗留）：blame → 冲突辅助 → hunk 级暂存（成本递增）

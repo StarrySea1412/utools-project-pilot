@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, onBeforeUnmount, ref } from 'vue';
-import { store, load, startScheduler, startAutoRefresh, refreshAllGit, addProject, checkGit, startSysMonitor, patrolOnce } from './store.js';
+import { store, load, startScheduler, startAutoRefresh, refreshAllGit, addProject, checkGit, startSysMonitor, patrolOnce, setBackgroundPaused } from './store.js';
 import { applyTheme, toast } from './ui.js';
 import Dashboard from './components/Dashboard.vue';
 import Detail from './components/Detail.vue';
@@ -25,12 +25,15 @@ function init() {
   startSysMonitor();
   if (window.utools) {
     window.utools.onPluginEnter(({ type, payload }) => {
+      setBackgroundPaused(false); // 回前台：恢复监控轮询并立即刷新一轮
       if (type === 'files' && payload?.length) {
         let n = 0;
         payload.forEach((p) => { if (addProject(p.path)) n++; });
         if (n) { toast(`已添加 ${n} 个项目`, 'ok'); refreshAllGit(true); }
       }
     });
+    // 收起插件窗口：暂停端口/系统/git 轮询（崩溃监测与自动任务保持运行，通知照常）
+    window.utools.onPluginOut?.(() => setBackgroundPaused(true));
   }
 }
 

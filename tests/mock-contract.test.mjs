@@ -1,11 +1,26 @@
 // mock-contract.test.mjs — mock 与 preload 的 window.pilot 契约一致性
-// 防 public/mock/utools-mock.js 漂移：preload 暴露的每个方法 mock 必须实现
+// 防 public/mock/utools-mock.js 漂移：preload 暴露的每个方法（含 git.xxx / sys.xxx / fs.xxx
+// 命名空间）mock 必须实现。旧实现用正则从源码抽方法名，实际抽出 0 个、形同虚设；
+// 现在 VM 加载 preload 拿到真实 API 面后全量比对。
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import { createRequire } from 'node:module';
 
 const root = path.resolve(__dirname, '..');
+const require_ = createRequire(import.meta.url);
+
+// 收集对象上的全部方法路径（含命名空间，如 git.status / sys.ports）
+function walkApi(obj, prefix = '') {
+  const out = [];
+  for (const k of Object.keys(obj)) {
+    const v = obj[k];
+    if (typeof v === 'function') out.push(prefix + k);
+    else if (v && typeof v === 'object') out.push(...walkApi(v, prefix + k + '.'));
+  }
+  return out.sort();
+}
 
 // 在沙箱里跑 mock 脚本，收集 window.pilot 的方法名
 function runMock() {
@@ -24,19 +39,18 @@ function runMock() {
   return sandbox.window;
 }
 
-// 从 preload.js 源码静态抽取 window.pilot = {...} 里的方法名
-function preloadApiNames() {
+// VM 加载 preload.js（CommonJS 源码），拿真实 API 面
+function loadRealPilot() {
   const code = fs.readFileSync(path.join(root, 'preload.js'), 'utf8');
-  const m = code.match(/window\.pilot\s*=\s*\{([\s\S]*?)\n\s{4}\}/);
-  if (!m) throw new Error('preload.js 中未找到 window.pilot 挂载块');
-  const names = new Set();
-  for (const line of m[1].split('\n')) {
-    const mm = line.match(/^\s{6}([A-Za-z_$][\w$]*)\s*\(/);
-    if (mm && !['if', 'for', 'while', 'switch', 'catch', 'return', 'function'].includes(mm[1])) names.add(mm[1]);
-    const ns = line.match(/^\s{6}([a-z]+):\s*\{/);
-    if (ns) names.add(ns[1]);
-  }
-  return names;
+  const sandbox = {
+    window: {},
+    require: (id) => require_(id),
+    process, console, setTimeout, clearTimeout, setInterval, clearInterval,
+  };
+  sandbox.globalThis = sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(code, sandbox);
+  return sandbox.window.pilot;
 }
 
 describe('mock 契约', () => {
@@ -46,25 +60,12 @@ describe('mock 契约', () => {
     expect(w.utools).toBeTruthy();
   });
 
-  it('preload 暴露的顶层 API mock 全部实现', () => {
-    const w = runMock();
-    const missing = [...preloadApiNames()].filter((n) => w.pilot[n] === undefined);
-    expect(missing).toEqual([]);
-  });
-
-  it('mock git 命名空间覆盖 preload git 的所有方法', () => {
-    const w = runMock();
-    const code = fs.readFileSync(path.join(root, 'preload.js'), 'utf8');
-    const gm = code.match(/git:\s*\{([\s\S]*?)\n\s{6}\}/);
-    const mockGit = w.pilot.git || {};
-    const missing = [];
-    if (gm) {
-      const KEYWORDS = ['if', 'for', 'while', 'switch', 'catch', 'return', 'function'];
-      for (const line of gm[1].split('\n')) {
-        const mm = line.match(/^\s{8}([A-Za-z_$][\w$]*)\s*\(/);
-        if (mm && !KEYWORDS.includes(mm[1]) && mockGit[mm[1]] === undefined) missing.push(mm[1]);
-      }
-    }
+  it('preload 暴露的全部 API（含命名空间）mock 全部实现', () => {
+    const real = walkApi(loadRealPilot());
+    const mock = new Set(walkApi(runMock().pilot));
+    // 防抽取再次空转：真实 API 面应远大于阈值（当前 54 项）
+    expect(real.length).toBeGreaterThan(40);
+    const missing = real.filter((n) => !mock.has(n));
     expect(missing).toEqual([]);
   });
 

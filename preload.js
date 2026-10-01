@@ -54,10 +54,11 @@ async function gitStatus(cwd) {
       addEntry(st, sp[1], sp.slice(8).join(' '));
     } else if (line.startsWith('2 ')) {
       // 2 <XY> <sub> <mH> <mI> <mU> <mH'> <mI'> <X><score> <newPath>\t<origPath>
+      // newPath / origPath 都可能含空格：newPath 取第 9 列之后的整段，origPath 取制表符之后的整段
       const parts = line.split('\t');
       const head = parts[0].split(' ');
-      const e = { x: head[1][0], y: head[1][1], path: parts[1] || '' };
-      if (parts[2]) { e.orig = parts[2]; e.renamed = true; }
+      const e = { x: head[1][0], y: head[1][1], path: head.slice(9).join(' ') };
+      if (parts[1]) { e.orig = parts[1]; e.renamed = true; }
       if (e.x !== '.' && e.x !== '?') st.stagedCount++;
       if (e.y !== '.' && e.y !== '?') st.unstagedCount++;
       st.entries.push(e);
@@ -318,35 +319,14 @@ function sysSelf() {
   };
 }
 
-let tasklistCache = { at: 0, map: new Map() }; // pid -> { name, mem(bytes) }
-async function pidNameMap() {
-  if (Date.now() - tasklistCache.at < 30000) return tasklistCache.map;
-  const r = await new Promise((resolve) => {
-    // tasklist 输出为 GBK，必须按 GBK 解码，否则中文进程名变乱码
-    execFile('tasklist', ['/fo', 'csv', '/nh'], { windowsHide: true, maxBuffer: 4 * 1024 * 1024, timeout: 15000, encoding: 'buffer' }, (err, stdout) => resolve(err ? null : stdout));
-  });
-  const text = r ? new TextDecoder('gbk').decode(r) : '';
-  const map = new Map();
-  for (const line of text.split('\n')) {
-    // CSV 列：映像名, PID, 会话名, 会话#, 内存占用（如 "45,678 K"）
-    const f = line.match(/"([^"]*)"/g);
-    if (!f || f.length < 5) continue;
-    const pid = +f[1].slice(1, -1);
-    if (!pid) continue;
-    const memM = f[4].match(/([\d,.]+)\s*K/i);
-    map.set(pid, { name: f[0].slice(1, -1), mem: memM ? Math.round(parseFloat(memM[1].replace(/,/g, '')) * 1024) : 0 });
-  }
-  tasklistCache = { at: Date.now(), map };
-  return map;
-}
-
-let procInfoCache = new Map(); // pid -> { at, name, commandLine, executablePath, ppid }
+let procInfoCache = new Map(); // pid -> { at, name, commandLine, executablePath, ppid, mem }
+let winInfoRefreshedAt = 0;    // 上次 WMI 全量刷新时间（内存占用 30s 周期刷新）
 
 async function queryProcessesWin(pids) {
   const res = new Map();
   if (!pids || !pids.length) return res;
   const filter = pids.map((id) => `ProcessId = ${id}`).join(' OR ');
-  const psCmd = `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ([wmisearcher]"SELECT ProcessId,ParentProcessId,Name,CommandLine,ExecutablePath FROM Win32_Process WHERE ${filter}").Get() | Select-Object ProcessId,ParentProcessId,Name,CommandLine,ExecutablePath | ConvertTo-Json -Compress`;
+  const psCmd = `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; ([wmisearcher]"SELECT ProcessId,ParentProcessId,Name,CommandLine,ExecutablePath,WorkingSetSize FROM Win32_Process WHERE ${filter}").Get() | Select-Object ProcessId,ParentProcessId,Name,CommandLine,ExecutablePath,WorkingSetSize | ConvertTo-Json -Compress`;
   const r = await new Promise((resolve) => {
     execFile('powershell.exe', [
       '-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', psCmd,
@@ -364,6 +344,7 @@ async function queryProcessesWin(pids) {
         name: item.Name || '',
         commandLine: item.CommandLine || '',
         executablePath: item.ExecutablePath || '',
+        mem: +item.WorkingSetSize || 0,
       });
     }
   } catch (e) {}
@@ -455,28 +436,17 @@ async function sysPorts() {
     if (!allListeningPids.has(cachedPid)) procInfoCache.delete(cachedPid);
   }
 
+  // Windows：一条 WMI 查询拉齐 名称/命令行/内存——增量补新 PID，30s 周期刷新内存
+  // （替代原 tasklist + WMI 双进程轮询；实测 tasklist 单次 ~2s，WMI ~0.65s）
   if (isWin) {
     const missingPids = [...allListeningPids].filter((pid) => !procInfoCache.has(pid));
-    if (missingPids.length > 0) {
+    if (allListeningPids.size > 0 && (missingPids.length > 0 || Date.now() - winInfoRefreshedAt > 30000)) {
       try {
-        const queried = await queryProcessesWin(missingPids);
+        const queried = await queryProcessesWin([...allListeningPids]);
         for (const [pid, info] of queried) {
           procInfoCache.set(pid, { at: Date.now(), ...info });
         }
-      } catch (e) {}
-    }
-    // tasklist 常刷（自身 30s TTL）：补全进程名并刷新内存占用
-    if (allListeningPids.size > 0) {
-      try {
-        const nm = await pidNameMap();
-        for (const pid of allListeningPids) {
-          const rec = nm.get(pid);
-          if (!rec) continue;
-          const cur = procInfoCache.get(pid) || { pid, ppid: null, commandLine: '', executablePath: '', mem: 0 };
-          if (rec.name && !cur.name) cur.name = rec.name;
-          if (rec.mem) cur.mem = rec.mem;
-          procInfoCache.set(pid, cur);
-        }
+        winInfoRefreshedAt = Date.now();
       } catch (e) {}
     }
   } else {

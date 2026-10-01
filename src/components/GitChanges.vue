@@ -33,7 +33,10 @@ async function loadStatus() {
   try {
     status.value = await window.pilot.git.status(props.project.path);
     error.value = null;
-    store.gitCache[props.project.id] = { status: status.value, at: Date.now(), notRepo: false, loading: false };
+    // 增量更新缓存：保住 checkGit 写入的 lastCommitAt，整写会让「最近更新」排序错位
+    const cache = store.gitCache[props.project.id] || (store.gitCache[props.project.id] = {});
+    cache.status = status.value; cache.at = Date.now();
+    cache.notRepo = false; cache.loading = false; cache.error = null;
   } catch (e) {
     error.value = String(e.message || e) + (e.stack ? ' @' + e.stack.split('\n')[1] : '');
   }

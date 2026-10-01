@@ -65,8 +65,8 @@ const onDragStart = (t, ev) => ev.dataTransfer.setData('text/pilot-todo', t.id);
     <Select v-model="draftQuad" :options="quadOptions" title="新增到哪个象限" />
     <Select v-model="draftProject" :options="projectOptions" title="关联项目（可选）" />
     <div class="subtabs tiny">
-      <button class="subtab" :class="{ 'subtab-active': view === 'list' }" @click="view = 'list'">列表</button>
-      <button class="subtab" :class="{ 'subtab-active': view === 'quad' }" @click="view = 'quad'">四象限</button>
+      <button class="subtab" :class="{ 'subtab-active': view === 'list' }" @click="view = 'list'"><Icon name="List" :size="12" /> 列表</button>
+      <button class="subtab" :class="{ 'subtab-active': view === 'quad' }" @click="view = 'quad'"><Icon name="LayoutGrid" :size="12" /> 四象限</button>
     </div>
     <button v-if="done.length" class="btn btn-ghost sm" @click="clearDoneTodos()">清空已完成</button>
   </div>

@@ -304,6 +304,8 @@ export function watchProc(scriptId) {
 }
 
 export function startScript(proj, script) {
+  const prev = store.procHandles[script.id];
+  if (prev) delete store.procLogs[prev.id]; // 回收上一轮进程日志，重启只保留最新一份
   const r = window.pilot.runScript(proj.path, script);
   store.procHandles[script.id] = { id: r.id, running: true, scriptName: script.name, projectId: proj.id, pid: r.pid || null, startedAt: Date.now() };
   store.procLogs[r.id] = '';
@@ -445,7 +447,7 @@ export async function refreshAllGit(force = false) {
 
 export function startAutoRefresh() {
   setInterval(() => {
-    if (store.view === 'dashboard' && document.visibilityState !== 'hidden') refreshAllGit();
+    if (store.view === 'dashboard' && document.visibilityState !== 'hidden' && !bgPaused) refreshAllGit();
   }, 90000);
 }
 
@@ -489,10 +491,20 @@ export async function patrolOnce(force = false) {
 }
 
 // ---------- 系统监测 ----------
+// 插件收起（onPluginOut）时置 true：暂停监控类轮询（端口/系统/git），回前台立即刷新一轮。
+// 崩溃监测（procWatch）与自动任务不受影响——隐藏期间服务崩了仍要能通知。
+let bgPaused = false;
+let sysPoll = null; // { fast, slow } 由 startSysMonitor 注入
+export function setBackgroundPaused(v) {
+  bgPaused = v;
+  if (!v && sysPoll) { sysPoll.fast(); sysPoll.slow(); }
+}
+
 export function startSysMonitor() {
   if (!window.pilot?.sys) return;
   store.sys = { mem: null, cpu: null, self: null, ports: [], portsLoading: false, portsError: '', memHistory: [], cpuHistory: [], selfHistory: [] };
   const pollFast = async () => {
+    if (bgPaused) return;
     try {
       const mem = window.pilot.sys.memory();
       const cpu = window.pilot.sys.cpu();
@@ -510,11 +522,13 @@ export function startSysMonitor() {
     } catch (e) { /* 忽略单次失败 */ }
   };
   const pollSlow = async () => {
+    if (bgPaused) return;
     store.sys.portsLoading = true;
     try { store.sys.ports = await window.pilot.sys.ports(); store.sys.portsError = ''; }
     catch (e) { store.sys.portsError = String(e.message || e); }
     store.sys.portsLoading = false;
   };
+  sysPoll = { fast: pollFast, slow: pollSlow };
   pollFast();
   pollSlow();
   setInterval(pollFast, 3000);

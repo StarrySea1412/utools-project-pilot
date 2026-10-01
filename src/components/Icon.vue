@@ -10,6 +10,7 @@ import {
   Bot, Folder, File, Eye, ListChecks, ScrollText, Wrench, ShieldAlert, CalendarClock,
   DatabaseBackup, Download, Upload, FileWarning, Pin, Keyboard,
   RotateCw, Activity, ChartNoAxesColumn, Scale, ExternalLink, Lock,
+  History, FileDiff,
 } from 'lucide-vue-next';
 
 const MAP = {
@@ -21,6 +22,7 @@ const MAP = {
   Bot, Folder, File, Eye, ListChecks, ScrollText, Wrench, ShieldAlert, CalendarClock,
   DatabaseBackup, Download, Upload, FileWarning, Pin, Keyboard,
   RotateCw, Activity, ChartNoAxesColumn, Scale, ExternalLink, Lock,
+  History, FileDiff,
 };
 
 const props = defineProps({
