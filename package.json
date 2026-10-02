@@ -1,14 +1,17 @@
 {
   "name": "utools-project-pilot",
   "private": true,
-  "version": "1.12.0",
+  "version": "1.13.0",
   "type": "module",
+  "main": "desktop/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "watch": "vite build --watch",
     "test": "vitest run",
-    "dev:real": "node scripts/real-server-guard.mjs"
+    "dev:real": "node scripts/real-server-guard.mjs",
+    "desktop": "electron .",
+    "desktop:build": "vite build && electron-builder --win zip"
   },
   "dependencies": {
     "lucide-vue-next": "^1.0.0",
@@ -16,7 +19,33 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
     "vite": "^5.4.11",
     "vitest": "^2.1.9"
+  },
+  "build": {
+    "appId": "com.starrysea.seewrok",
+    "productName": "Seewrok",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "desktop/**/*",
+      "dist/**/*",
+      "preload.js",
+      "logo.png",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "zip"
+      ],
+      "icon": "logo.png"
+    }
+  },
+  "allowScripts": {
+    "electron@33.4.11": true,
+    "esbuild@0.21.5": true
   }
 }

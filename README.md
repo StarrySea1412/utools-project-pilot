@@ -90,6 +90,25 @@ npm run watch      # 开发时增量构建
 npm run dev        # 纯前端开发（mock 模式，浏览器直接调试）
 ```
 
+## 🖥 独立桌面版（解压即用，无需 uTools）
+
+同一套 `dist/` 产物 + `preload.js` 桥接层，外加一层 Electron 壳——**渲染层与 Node 桥接零改动复用**。
+
+```bash
+npm run desktop          # 开发态直接启动（需先 npm run build）
+npm run desktop:build    # 打包：vite build + electron-builder → release/Seewrok-x.y.z-win.zip
+```
+
+解压 zip 后双击 `Seewrok.exe` 即可运行：
+
+- **窗口 980×640**（与插件同尺寸），可缩放；**点关闭 = 隐藏到托盘**，真正退出走托盘菜单
+- **全局热键 `Alt+Shift+S`** 呼出 / 隐藏（可在 `desktop/main.cjs` 顶部改）
+- **单实例**：重复启动聚焦已有窗口
+- **数据独立**：存于 `%APPDATA%/Seewrok/pilot-db.json`，与 uTools 版互不影响；支持导入导出互迁（设置 → 数据备份）
+- 收起时自动暂停监控轮询（与 uTools 版 `onPluginOut` 行为一致），回到前台即时刷新
+
+已知代价：解压 ~300MB / 常驻内存 ~380MB（Electron 税）；未签名 exe 首次运行会弹 SmartScreen，点「仍要运行」即可。架构细节见 `desktop/main.cjs`（主进程壳）与 `desktop/preload.cjs`（utools shim —— 让现有代码以为自己还在 uTools 里）。
+
 ## 🗂 目录结构
 
 ```
@@ -97,6 +116,9 @@ utools-project-pilot/
 ├── plugin.json            # uTools 插件清单（main → dist/index.html）
 ├── preload.js             # Node 引擎：Git / 进程 / 文件 / DB / AI / 系统监测
 ├── index.html             # Vite 入口
+├── desktop/               # 独立桌面版（Electron 壳）
+│   ├── main.cjs            # 主进程：窗口/托盘/热键/单实例/同步 IPC（db·对话框·通知）
+│   └── preload.cjs         # window.utools shim + 挂载根 preload.js → window.pilot
 ├── src/
 │   ├── main.js            # 挂载 + 全局错误钩子
 │   ├── store.js           # reactive 状态：项目/设置/Git 缓存/进程/自动任务/系统轮询

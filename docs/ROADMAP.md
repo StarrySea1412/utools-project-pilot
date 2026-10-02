@@ -111,6 +111,22 @@
 
 1. **Git 深水区**（v1.3 遗留）：blame → 冲突辅助 → hunk 级暂存（成本递增）
 2. **无 UI 看门进程**：独立小进程承载 24h 端口探活/自动任务/通知，UI 仍是 uTools 插件（桌面化路径 C）
+3. **桌面版增强**：sys 轮询挪主进程（renderer 定时器被 Chromium 节流，托盘态监控不如主进程稳）；开机自启设置；代码签名
+
+---
+
+## v1.13.0 · 独立桌面版（2026-10，已完成）
+
+主题：解压 → 双击 exe → 运行。同一套 dist 产物与 preload 桥接层，加一层 Electron 壳（约 280 行），渲染层与 Node 桥零改动复用。
+
+| 事项 | 说明 |
+|---|---|
+| 架构 | desktop/main.cjs 主进程（窗口/托盘/热键/单实例）+ desktop/preload.cjs（window.utools shim + require 根 preload.js 挂 window.pilot）。mock 因 shim 先行注入自动失效；type:module 与 CommonJS 冲突以 .cjs 解决 |
+| utools shim | 12 个方法：db 三件套 → userData JSON（同步 IPC 单通道 pilot-call）；对话框 → dialog.showXxxSync（同步变体完美映射 preload 的同步期望）；isDark → nativeTheme；通知/壳操作 → Electron 主进程；copyText → renderer clipboard；onPluginEnter/Out → 窗口 show/hide 事件（v1.9.3 收起暂停轮询免费生效）；getDragFilePaths → []（HTML5 拖拽 File.path 兜底） |
+| 壳行为 | 980×640 与 pluginSetting 一致；关 X = 隐藏到托盘（真退出走托盘菜单）；全局热键 Alt+Shift+S；单实例锁聚焦；dist 缺失弹错误框 |
+| 打包 | electron-builder zip（国内镜像 npmmirror）；files 只含 desktop/ + dist/ + preload.js + logo，产物 111MB |
+| 验证 | 开发态与解压双击两路实测：窗口出现、UI 渲染（区域采样 492 色）、打包版 4 进程 377MB |
+| 代价（已知） | Electron 税：解压 307MB / 常驻 ~380MB；无签名 SmartScreen 提示；隐藏 ≠ 24h 监控（与插件一致） |
 
 ---
 
