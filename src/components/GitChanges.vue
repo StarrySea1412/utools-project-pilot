@@ -2,6 +2,7 @@
 import { computed, ref, onMounted } from 'vue';
 import { store, saveProjects, checkGit, refreshAllGit, genCommitMessage } from '../store.js';
 import { toast, confirmBox, openModal } from '../ui.js';
+import { parseBlame, parseConflicts, resolveConflicts, splitHunks, buildPatch, hunkLineCls } from '../git-deep.js';
 import Icon from './Icon.vue';
 import BranchModal from '../modals/BranchModal.vue';
 
@@ -45,11 +46,14 @@ async function loadStatus() {
 
 async function showDiff(f, isStaged) {
   selKey.value = keyOf(f);
+  curFile.value = f;
   diffStaged.value = isStaged;
+  pickedHunks.value = [];
   diffLoading.value = true;
   try { diff.value = await window.pilot.git.diffFile(props.project.path, f, isStaged); }
   catch (e) { diff.value = '（' + (e.message || e) + '）'; }
   diffLoading.value = false;
+  if (f.unmerged) loadConflict(f); // 冲突文件：读工作区全文渲染冲突块
 }
 
 async function stage(files) {
@@ -157,6 +161,90 @@ const diffLines = computed(() => diff.value.split('\n').map((l) => ({
   cls: l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : l.startsWith('@@') ? 'hunk' : '',
 })));
 
+// ---------- 冲突解决辅助 ----------
+// 选中冲突文件时直接读工作区全文，按块渲染 ours/base/theirs，逐块采用后写回并暂存
+const conflictBlocks = computed(() => (curFile.value?.unmerged ? parseConflicts(conflictText.value) : []));
+const curFile = ref(null);
+const conflictText = ref('');
+const picks = ref([]); // 每块决议：'ours' | 'theirs' | 'base' | null（未定）
+const resolving = ref(false);
+
+async function loadConflict(f) {
+  conflictText.value = '';
+  try {
+    const txt = await window.pilot.fs.readText(props.project.path + '/' + f.path);
+    conflictText.value = txt;
+    picks.value = parseConflicts(txt).map(() => null);
+  } catch (e) { toast('读取冲突文件失败：' + (e.message || e), 'err'); }
+}
+function pick(i, side) { picks.value[i] = side; picks.value = [...picks.value]; }
+const allPicked = computed(() => conflictBlocks.value.length > 0 && picks.value.every(Boolean));
+async function applyResolution() {
+  if (!allPicked.value) { toast('还有冲突块未选择采用哪一方', 'warn'); return; }
+  resolving.value = true;
+  try {
+    const out = resolveConflicts(conflictText.value, conflictBlocks.value, picks.value);
+    await window.pilot.fs.writeText(props.project.path + '/' + curFile.value.path, out);
+    await window.pilot.git.stage(props.project.path, [curFile.value.path]);
+    toast('冲突已按选择解决并暂存，检查后提交', 'ok');
+    await loadStatus(); refreshAllGit(true);
+  } catch (e) { toast('写回失败：' + (e.message || e), 'err'); }
+  resolving.value = false;
+}
+
+// ---------- hunk 级暂存 ----------
+// 未暂存文件按 hunk 展示，勾选部分 hunk → buildPatch → git apply --cached
+const hunks = computed(() => {
+  if (!curFile.value || curFile.value.untracked || curFile.value.unmerged || diffStaged.value) return [];
+  return splitHunks(diff.value);
+});
+const patchHead = computed(() => {
+  const lines = diff.value.split('\n');
+  const at = lines.findIndex((l) => l.startsWith('@@'));
+  return at > 0 ? lines.slice(0, at).join('\n') : '';
+});
+const pickedHunks = ref([]);
+function toggleHunk(i) {
+  const idx = pickedHunks.value.indexOf(i);
+  if (idx >= 0) pickedHunks.value.splice(idx, 1);
+  else pickedHunks.value.push(i);
+}
+const stagingHunks = ref(false);
+async function stageHunks() {
+  if (!pickedHunks.value.length) { toast('先勾选要暂存的 hunk', 'warn'); return; }
+  stagingHunks.value = true;
+  try {
+    const patchText = buildPatch(patchHead.value, hunks.value, pickedHunks.value);
+    await window.pilot.git.applyStaged(props.project.path, patchText);
+    pickedHunks.value = [];
+    toast('已暂存所选变更块', 'ok');
+    await loadStatus(); refreshAllGit(true);
+  } catch (e) { toast('部分暂存失败：' + (e.message || e), 'err'); }
+  stagingHunks.value = false;
+}
+
+// ---------- 单文件历史 + blame ----------
+const fileHistory = ref(null); // { mode: 'log'|'blame', log: [], blame: null }
+const deepLoading = ref(false);
+async function openFileLog(f) {
+  deepLoading.value = true;
+  fileHistory.value = null;
+  try {
+    fileHistory.value = { mode: 'log', file: f.path, log: await window.pilot.git.fileLog(props.project.path, f.path, 40), blame: null };
+  } catch (e) { toast('文件历史读取失败：' + (e.message || e), 'err'); }
+  deepLoading.value = false;
+}
+async function openBlame() {
+  if (!fileHistory.value) return;
+  deepLoading.value = true;
+  try {
+    const raw = await window.pilot.git.blameRaw(props.project.path, fileHistory.value.file);
+    fileHistory.value = { ...fileHistory.value, mode: 'blame', blame: parseBlame(raw) };
+  } catch (e) { toast('blame 读取失败：' + (e.message || e), 'err'); }
+  deepLoading.value = false;
+}
+function closeDeep() { fileHistory.value = null; }
+
 // 初始默认选中第一个文件
 async function initSel() {
   await loadStatus();
@@ -214,12 +302,71 @@ onMounted(initSel);
     </aside>
 
     <section class="glass panel diff-panel">
-      <div v-if="selKey" class="diff-view">
+      <!-- 单文件历史 / blame 深水视图 -->
+      <div v-if="fileHistory" class="deep-view">
+        <div class="diff-head">
+          <code>{{ fileHistory.file }}</code>
+          <span class="mini-tag">{{ fileHistory.mode === 'blame' ? 'blame' : '文件历史' }}</span>
+          <span class="spacer"></span>
+          <button v-if="fileHistory.mode === 'log'" class="btn btn-ghost sm" @click="openBlame"><Icon name="ListChecks" :size="12" /> 行级 blame</button>
+          <button class="icon-btn" title="关闭" @click="closeDeep"><Icon name="X" :size="13" /></button>
+        </div>
+        <div v-if="deepLoading" class="loading-panel">读取中…</div>
+        <!-- 文件历史列表 -->
+        <div v-else-if="fileHistory.mode === 'log'" class="deep-log">
+          <div v-for="(c, i) in fileHistory.log" :key="c.hash + i" class="deep-log-row">
+            <span class="mono ch-badge b-s" :title="c.hash">{{ c.short }}</span>
+            <span class="deep-log-subj">{{ c.subject }}</span>
+            <span class="hint">{{ c.author }} · {{ String(c.date).slice(0, 10) }}</span>
+          </div>
+          <p v-if="!fileHistory.log.length" class="hint pad">该文件没有提交记录。</p>
+        </div>
+        <!-- blame 视图 -->
+        <div v-else class="deep-blame">
+          <div class="blame-legend">
+            <span v-for="a in fileHistory.blame.authors.slice(0, 5)" :key="a.name" class="mini-tag">{{ a.name }} {{ Math.round(a.count / fileHistory.blame.total * 100) }}%</span>
+            <span class="hint">{{ fileHistory.blame.total }} 行</span>
+          </div>
+          <pre class="diff-code"><template v-for="(l, i) in fileHistory.blame.lines" :key="i"><span class="blame-meta mono">{{ l.short }} {{ l.author }} {{ l.date }}</span><span class="dl">{{ l.code || ' ' }}</span></template></pre>
+        </div>
+      </div>
+
+      <!-- 冲突解决辅助 -->
+      <div v-else-if="curFile?.unmerged && conflictBlocks.length" class="conflict-view">
+        <div class="diff-head">
+          <code>{{ curFile.path }}</code>
+          <span class="mini-tag" :class="{ svc: allPicked }">{{ allPicked ? '可应用' : '冲突 ×' + conflictBlocks.length }}</span>
+          <span class="spacer"></span>
+          <button class="btn btn-primary sm" :disabled="!allPicked || resolving" @click="applyResolution"><Icon name="Check" :size="12" /> {{ resolving ? '写回中…' : '解决并暂存' }}</button>
+        </div>
+        <div class="conflict-blocks">
+          <div v-for="(b, i) in conflictBlocks" :key="i" class="cf-block">
+            <div class="cf-title">冲突块 {{ i + 1 }}<span class="cf-picks">
+              <button class="cf-pick" :class="{ on: picks[i] === 'ours' }" @click="pick(i, 'ours')">采用我</button>
+              <button v-if="b.base.length" class="cf-pick" :class="{ on: picks[i] === 'base' }" @click="pick(i, 'base')">原版本</button>
+              <button class="cf-pick" :class="{ on: picks[i] === 'theirs' }" @click="pick(i, 'theirs')">采用对方</button>
+            </span></div>
+            <pre class="cf-side ours"><span class="dl" v-for="(l, j) in b.ours" :key="'o'+j">{{ l || ' ' }}</span></pre>
+            <pre v-if="b.base.length" class="cf-side base"><span class="dl" v-for="(l, j) in b.base" :key="'b'+j">{{ l || ' ' }}</span></pre>
+            <pre class="cf-side theirs"><span class="dl" v-for="(l, j) in b.theirs" :key="'t'+j">{{ l || ' ' }}</span></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- 常规 diff（含 hunk 勾选） -->
+      <div v-else-if="selKey" class="diff-view">
         <div class="diff-head">
           <code>{{ selKey?.split(':')[1] }}</code>
           <span class="mini-tag">{{ diffStaged ? '已暂存' : '未暂存' }}</span>
+          <span v-if="!diffStaged && !curFile?.untracked && hunks.length > 1" class="hint">勾选后可部分暂存</span>
+          <span class="spacer"></span>
+          <button v-if="curFile && !curFile.untracked && !curFile.unmerged" class="icon-btn" title="该文件的提交历史" @click="openFileLog(curFile)"><Icon name="History" :size="13" /></button>
         </div>
-        <pre v-if="!diffLoading" class="diff-code"><span v-for="(l, i) in diffLines" :key="i" class="dl" :class="l.cls">{{ l.text || ' ' }}</span></pre>
+        <div v-if="!diffStaged && !curFile?.untracked && hunks.length" class="hunk-bar">
+          <button v-for="(h, i) in hunks" :key="i" class="hunk-chip" :class="{ on: pickedHunks.includes(i) }" @click="toggleHunk(i)">块 {{ i + 1 }}</button>
+          <button class="btn btn-ghost sm" :disabled="!pickedHunks.length || stagingHunks" @click="stageHunks"><Icon name="Plus" :size="12" /> {{ stagingHunks ? '暂存中…' : `暂存所选 ${pickedHunks.length}/${hunks.length}` }}</button>
+        </div>
+        <pre v-if="!diffLoading" class="diff-code"><template v-for="(h, hi) in hunks" :key="hi"><span v-if="!diffStaged && !curFile?.untracked" class="dl hunk" :class="{ picked: pickedHunks.includes(hi) }" @click="toggleHunk(hi)">{{ h.header }}</span><span v-for="(l, i) in h.lines" :key="hi + '-' + i" class="dl" :class="hunkLineCls(l)">{{ l || ' ' }}</span></template><template v-if="!hunks.length"><span v-for="(l, i) in diffLines" :key="i" class="dl" :class="l.cls">{{ l.text || ' ' }}</span></template></pre>
         <div v-else class="loading-panel">计算差异…</div>
       </div>
       <p v-else class="hint pad">从左侧选择文件查看差异。</p>

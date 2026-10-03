@@ -109,9 +109,22 @@
 
 ### 下一步候选（按调研优先级）
 
-1. **Git 深水区**（v1.3 遗留）：blame → 冲突辅助 → hunk 级暂存（成本递增）
-2. **无 UI 看门进程**：独立小进程承载 24h 端口探活/自动任务/通知，UI 仍是 uTools 插件（桌面化路径 C）
-3. **桌面版增强**：sys 轮询挪主进程（renderer 定时器被 Chromium 节流，托盘态监控不如主进程稳）；开机自启设置；代码签名
+1. **无 UI 看门进程**：独立小进程承载 24h 端口探活/自动任务/通知，UI 仍是 uTools 插件（桌面化路径 C）
+2. **桌面版增强**：sys 轮询挪主进程（renderer 定时器被 Chromium 节流，托盘态监控不如主进程稳）；开机自启设置；代码签名
+
+---
+
+## v1.14.0 · Git 深水区（2026-10，已完成）
+
+主题：v1.3 遗留三件套收官——单文件历史 + blame、冲突解决辅助、hunk 级部分暂存。至此 Git 工作台完整覆盖日常 Git 客户端操作。
+
+| 事项 | 说明 |
+|---|---|
+| 纯逻辑层 | 新增 src/git-deep.js：parseBlame（porcelain → 行级 + 作者统计）/ parseConflicts（含 diff3 base 段状态机，非冲突语境的 `=======` 不误判）/ resolveConflicts（从后往前替换防位移）/ splitHunks + buildPatch（补丁重组）|
+| preload 3 新 API | `git.fileLog`（--follow 单文件历史）/ `git.blameRaw`（porcelain 原文）/ `git.applyStaged`（补丁经 stdin 喂 `git apply --cached`）；mock 已同步（契约测试强制） |
+| UI（GitChanges） | 冲突文件：按块三栏（我/原版本/对方）逐块采用 → 写回 + 暂存；未暂存 diff：hunk 头可点击勾选，工具条「暂存所选 N/M」部分暂存；diff 头部 History 图标 → 单文件历史 ↔ 行级 blame 双视图 |
+| 测试 | tests/git-deep.test.mjs 13 用例 + 真实 git 仓库集成验证（blame 摘要、--follow、单 hunk 暂存后 staged=1/unstaged=0、真冲突 ours 决议后 unmerged=0 全过） |
+| 踩坑记录 | parseConflicts 状态机两处经典 bug 被单测当场拦下：标记行 continue 跳过行号自增导致边界错位；分隔符判定需限定冲突语境防普通 `=======` 行误判 |
 
 ---
 

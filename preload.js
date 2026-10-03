@@ -128,6 +128,35 @@ async function gitTags(cwd) {
   });
 }
 
+// 单文件提交历史：该文件出现过的提交（新→旧，带变更统计）
+async function gitFileLog(cwd, file, n = 40) {
+  const sep = '\u001f', fld = '\u0001';
+  const out = await git(cwd, ['log', `--pretty=format:%H${fld}%h${fld}%an${fld}%aI${fld}%s${sep}`, '--follow', '-n', String(n), '--', file]);
+  return out.split(sep).filter(r => r.trim()).map(r => {
+    const [hash, short, author, date, subject] = r.split(fld);
+    return { hash: (hash || '').trim(), short, author, date, subject: subject || '' };
+  });
+}
+
+// 行级溯源：porcelain 输出交给 src/git-deep.js 的 parseBlame 解析
+async function gitBlameRaw(cwd, file) {
+  return git(cwd, ['blame', '--porcelain', '--', file]);
+}
+
+// hunk 级暂存：补丁文本经 stdin 喂给 git apply --cached
+async function gitApplyStaged(cwd, patch) {
+  return new Promise((resolve, reject) => {
+    const p = execFile('git', ['apply', '--cached', '--whitespace=nowarn', '-'], {
+      cwd, timeout: 30000, maxBuffer: 16 * 1024 * 1024, windowsHide: true,
+      env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' },
+    }, (err, _so, stderr) => {
+      if (err) reject(new Error((stderr || err.message || '').trim()));
+      else resolve(true);
+    });
+    p.stdin.end(patch);
+  });
+}
+
 async function gitCommit(cwd, message) {
   await git(cwd, ['commit', '-m', message]);
   return git(cwd, ['rev-parse', '--short', 'HEAD']);
@@ -681,6 +710,9 @@ if (typeof window !== 'undefined') {
       log: gitLog,
       branches: gitBranches,
       tags: gitTags,
+      fileLog: gitFileLog,
+      blameRaw: gitBlameRaw,
+      applyStaged: gitApplyStaged,
       // 提交行引用标签（分支/tag，git graph 风）：hash -> [label…]
       async commitBranches(cwd, limit = 200) {
         const sep = '\u0001', fld = '\u0002';

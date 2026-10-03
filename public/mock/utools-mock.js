@@ -158,6 +158,10 @@ index 3a2f1bc..8d91e2f 100644
       async commitBranches() { return { '920132ab': ['main'], 'e84517af': ['main', 'feature/perf'], '93aa2677': ['v1.7.5'] }; },
       // tag 列表 mock：新→旧，锚点 hash 对应 fakeLog 里的提交
       async tags() { return [{ name: 'v1.7.5', hash: '93aa2677' }, { name: 'v1.6.0', hash: 'e84517af' }, { name: 'v1.2.0', hash: '920132ab' }]; },
+      // 单文件历史 / blame 原始输出 / hunk 级暂存（mock）
+      async fileLog() { return fakeLog.slice(0, 6); },
+      async blameRaw() { return 'a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e 1 1 1\nauthor you\nauthor-time 1750000000\nsummary 初始提交\n\tconst a = 1;\n'; },
+      async applyStaged() { return true; },
       async checkout() {},
       async createBranch(_cwd, name) { mockBranches.push({ current: false, name, upstream: '' }); },
       async deleteBranch(_cwd, name) { mockBranches = mockBranches.filter((b) => b.name !== name); },
