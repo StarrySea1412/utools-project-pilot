@@ -1026,6 +1026,14 @@ body {
 .port-mem { color: var(--accent-2); font-size: 11px; font-weight: 700; flex-shrink: 0; }
 .ex-idea-todo { flex-shrink: 0; align-self: center; white-space: nowrap; }
 
+/* TabDoctor：体检改进项 */
+.dr-effort { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 5px; background: var(--stroke-soft); color: var(--text-2); margin-left: 6px; vertical-align: 1px; }
+.dr-why { font-size: 11px; color: var(--text-3); margin: 3px 0 0; font-style: italic; }
+.dr-notes { margin: 4px 0 0; padding-left: 18px; font-size: 11.5px; line-height: 1.7; }
+.dr-item .ex-idea-lv.lv2, .dr-item.lv2 .ex-idea-lv { background: color-mix(in srgb, var(--err) 14%, transparent); color: var(--err); }
+.dr-item.lv1 .ex-idea-lv { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+.dr-item.lv0 .ex-idea-lv { background: color-mix(in srgb, var(--warn) 15%, transparent); color: var(--warn); }
+
 /* ---------- 运行时面板（Lazydocker 式全局服务视图） ---------- */
 .rt-panel { border-radius: var(--r-lg); padding: 10px 14px; display: flex; flex-direction: column; max-height: 34vh; min-height: 0; }
 .rt-rows { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }

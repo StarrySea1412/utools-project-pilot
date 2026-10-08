@@ -10,3 +10,4 @@ export * from './store/gitsync.js';
 export * from './store/sysmon.js';
 export * from './store/backup.js';
 export * from './store/algo.js';
+export * from './store/doctor.js';

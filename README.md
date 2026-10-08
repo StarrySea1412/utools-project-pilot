@@ -61,6 +61,7 @@
 - 拉取 / 推送 / 全部暂存快捷操作
 
 ### 🤖 AI 能力（任意 OpenAI 兼容服务）
+- **✦ 项目体检（v1.16.0）**：`preload/inspect.cjs` 硬采集依赖漏洞（`npm audit --package-lock-only`）/ 过期依赖 / TODO 债务 / 文档与测试覆盖 / Git 卫生五路数据，AI 输出**结构化报告**——健康分 + 分维度剖析 + 按优先级排序的改进清单（严重度 × 工作量）；无 AI 时降级为离线规则评分。与「探索」错开：探索问「该长什么新功能」，体检答「工程质量有什么要修」。
 - **AI 今日建议**：项目态势 + 待办 + 最近提交 + 失败任务汇总给模型，结构化输出可点击的当日规划（按天持久化，一天一份）
 - AI 提交信息：暂存区 diff（自动截断）+ 自定义提示词 → Conventional Commits 风格
 - AI 提交分析：内置「变更总结 / 周报生成 / 风险审查」，支持**自定义模式与提示词**，可选分析最近 20/50/100 条
@@ -128,6 +129,7 @@ utools-project-pilot/
 │   ├── ai.cjs              # AI 域：OpenAI 兼容 chat 调用
 │   ├── sys.cjs             # 系统监测域：内存/CPU/端口/进程信息/HTTP 探活
 │   ├── identify.cjs        # 项目身份识别：logo + 技术栈
+│   ├── inspect.cjs         # 项目体检采集：deps(audit/outdated)/TODO/文档/测试/git 卫生
 │   └── utools.cjs          # uTools API 封装：db 兼容/对话框/shell/通知
 ├── index.html             # Vite 入口
 ├── desktop/               # 独立桌面版（Electron 壳）
@@ -137,7 +139,7 @@ utools-project-pilot/
 │   ├── main.js            # 挂载 + 全局错误钩子
 │   ├── store.js           # 门面：re-export src/store/ 各领域模块（导出面不变）
 │   ├── store/             # 领域状态模块：state / projects / workspace / ai /
-│   │                      # procs / gitsync / sysmon / backup
+│   │                      # procs / gitsync / sysmon / backup / algo / doctor
 │   ├── ui.js              # toast / modal / confirm / 工具
 │   ├── advisor.js         # 领航建议：规则引擎 + AI 增强
 │   ├── assets/app.css     # iOS 磨砂玻璃样式（双主题）

@@ -223,6 +223,30 @@ index 3a2f1bc..8d91e2f 100644
       },
     },
     // ---------- 项目身份识别（mock：无图标，按项目给技术栈演示） ----------
+    inspect: {
+      // 体检采集 mock：演示一份带典型问题的数据（漏洞 + TODO + 测试全但文档薄 + 工作区脏）
+      async inspect() {
+        return {
+          ok: true, root: 'D:/demo/axonhub',
+          pkg: { name: 'axonhub', deps: ['vue', 'vite'], devDeps: ['vitest'], scripts: ['dev', 'build', 'test'], hasTestScript: true, hasLintScript: true, packageManager: '' },
+          deps: {
+            hasLockfile: true, npmAvailable: true,
+            outdated: [{ name: 'vite', current: '5.4.0', wanted: '5.4.0', latest: '8.3.4' }, { name: 'eslint', current: '8.57.0', wanted: '8.57.0', latest: '9.31.0' }],
+            audit: { info: 0, low: 1, moderate: 4, high: 2, critical: 0, total: 7 },
+            notes: [],
+          },
+          todos: {
+            total: 12, byType: { TODO: 7, FIXME: 4, HACK: 1 }, scannedFiles: 86, truncated: false,
+            samples: [{ file: 'src/renderer/git/GitView.tsx', line: 214, type: 'FIXME', text: '// FIXME 分支切换后状态回弹' }, { file: 'src/main/bridge.ts', line: 42, type: 'TODO', text: '// TODO 统一 stderr 编码' }],
+          },
+          docs: { readme: { name: 'README.md', bytes: 2400, mtime: Date.now() - 200 * 864e5 }, license: false, changelog: false, docsDir: false },
+          tests: { testFiles: 8, dirs: ['tests'] },
+          git: { available: true, branch: 'main', ahead: 0, behind: 2, staged: 0, unstaged: 5, untracked: 3, dirty: 8, lastCommitTs: Date.now() - 32 * 864e5 },
+          notes: ['演示数据：mock 环境返回固定样本'],
+          tookMs: 12,
+        };
+      },
+    },
     async identify(p) {
       const fw = { 'axonhub': 'Electron', 'utools-project-pilot': 'Vue', 'ai-learning-platform': 'Django', 'smart-gallery': 'React', 'latex-notes': '' };
       const name = (p || '').split('/').pop();

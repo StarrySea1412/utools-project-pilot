@@ -9,6 +9,7 @@ const proc = require('./preload/proc.cjs');
 const { fsApi } = require('./preload/fs.cjs');
 const { aiChat } = require('./preload/ai.cjs');
 const { sysApi } = require('./preload/sys.cjs');
+const { inspectApi } = require('./preload/inspect.cjs');
 const { identify } = require('./preload/identify.cjs');
 const utools = require('./preload/utools.cjs');
 
@@ -48,6 +49,8 @@ if (typeof window !== 'undefined') {
     identify,
     // system monitor
     sys: sysApi,
+    // 项目体检采集
+    inspect: inspectApi,
     // misc
     defaultCommitPrompt: '你是资深工程师。根据我提供的 git 暂存区变更，生成一条简洁规范的中文 commit message，遵循 Conventional Commits（如 feat/fix/docs/refactor/perf/chore/test(scope): 描述）。只输出消息本身，不要任何解释、代码块或引号，50 字以内。',
   };

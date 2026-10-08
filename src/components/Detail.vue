@@ -10,14 +10,15 @@ import TabNotes from './TabNotes.vue';
 import TabTasks from './TabTasks.vue';
 import TabFiles from './TabFiles.vue';
 import TabExplore from './TabExplore.vue';
+import TabDoctor from './TabDoctor.vue';
 import EditProjectModal from '../modals/EditProjectModal.vue';
 import Icon from './Icon.vue';
 
 const TABS = [
   ['overview', '概览', 'LayoutGrid'], ['scripts', '脚本', 'Terminal'], ['git', 'Git', 'GitBranch'],
-  ['notes', '备忘', 'Pencil'], ['tasks', '任务', 'Timer'], ['files', '文件', 'Folder'], ['explore', '探索', 'Compass'],
+  ['notes', '备忘', 'Pencil'], ['tasks', '任务', 'Timer'], ['files', '文件', 'Folder'], ['explore', '探索', 'Compass'], ['doctor', '体检', 'Stethoscope'],
 ];
-const TAB_COMPS = { overview: TabOverview, scripts: TabScripts, git: TabGit, notes: TabNotes, tasks: TabTasks, files: TabFiles, explore: TabExplore };
+const TAB_COMPS = { overview: TabOverview, scripts: TabScripts, git: TabGit, notes: TabNotes, tasks: TabTasks, files: TabFiles, explore: TabExplore, doctor: TabDoctor };
 
 const proj = computed(() => activeProject());
 const st = computed(() => store.gitCache[proj.value?.id]?.status);

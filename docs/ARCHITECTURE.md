@@ -1,7 +1,7 @@
 # Seewrok · 架构一页纸与框架梳理规划
 
-> 基线：v1.14.0（9ccd6ec），129 tests / 14 files 全绿，`vite build` 干净。
-> 定稿：2026-10-06。
+> 基线：v1.16.0，161 tests / 17 files 全绿，`vite build` 干净。
+> 更新：2026-10-08——Node 桥/store 已按第三节拆分落地（v1.14.1），「体检 Agent」（体检采集域 + 结构化报告）载入 v1.16.0；Docker 桥与 remote-agent 一起挂到「agent 感知面扩展」的新主线下。
 > 一句话定位：**三端同构的本地项目领航台**——同一套 Vue 渲染层 + 同一个 `window.pilot` API 面，跑在 uTools、Electron 桌面版、浏览器三个宿主里。
 
 ---
@@ -48,12 +48,13 @@
 | `git-deep.js` | blame/冲突/hunk 解析（纯函数，有单测） |
 | `git-graph.js` | 提交拓扑分道（纯函数） |
 | `changelog.js` | Changelog 生成（纯函数，有单测） |
-| `editors.js` / `explore.js` | 编辑器模板 / 探索模式评估（有单测） |
+| `editors.js` / `explore.js` / `doctor.js` | 编辑器模板 / 探索模式评估 / 体检规则评分与 AI 报告解析（均有单测） |
 | `ui.js` / `components/` / `modals/` | 视图与交互 |
 
-### 1.3 Node 桥职责（preload.js，**827 行单文件，待拆**）
+### 1.3 Node 桥职责（preload.js，已拆为 1 入口 + 9 模块）
 
-按源码段落：`runCmd/cut` 工具 → Git（14 个函数）→ 进程/脚本 → 文件 → AI → 系统监测（内存/CPU/端口/探活）→ `window.pilot` 挂载（含 db 兼容、对话框、identify）。
+`preload.js` 只剩装配（~62 行）：require 各域模块 + 挂载 `window.pilot`。
+按源码段落：`runCmd/cut` 工具 → Git（14 个函数）→ 进程/脚本 → 文件 → AI → 系统监测（内存/CPU/端口/探活）→ 体检采集（v1.16.0 新增，见下）→ `window.pilot` 挂载。**第九个模块 `preload/inspect.cjs`**：体检采集域——deps（audit/outdated）/ TODO 债务 / 文档 / 测试 / git 卫生五路硬数据；git 卫生直接复用 git.cjs（status/log -1），不复制 porcelain 解析。
 
 ---
 
@@ -79,6 +80,7 @@ preload/
   fs.cjs              # listDir / isTextFile / readText / writeText…，导出 fsApi
   ai.cjs              # aiChat（OpenAI 兼容）
   sys.cjs             # memory / cpu / self / ports / probe；依赖 proc.listActiveInternal 做内部脚本归属
+  inspect.cjs         # 项目体检采集：deps(audit/outdated)/TODO/文档/测试/git 卫生（复用 git.cjs）
   identify.cjs        # logo 探测 + 技术栈识别
   utools.cjs          # db 兼容 / 对话框 / shell 打开 / 通知 / 终端 / PATH 探测（uTools API 封装层）
 ```
@@ -113,9 +115,14 @@ src/store/
   gitsync.js            # checkGit / refreshAllGit / 静默巡检 patrolOnce（Git 态势域）
   sysmon.js             # 系统轮询 / 服务健康探测 / 端口归属（matchProjectForPort / projectServices / portProject）
   ai.js                 # ai() / genCommitMessage / analyzeHistory / saveAiAdvice / saveExplore
+  backup.js             # 数据导出/导入
+  algo.js               # 刷题领航域（v1.15.0）
+  doctor.js             # 体检域：runDoctor 总流程 + saveDoctor 按天缓存（纯逻辑在 src/doctor.js）
 ```
 
-**依赖规则**：`state ← 所有`；`workspace ← procs / gitsync / sysmon`（通知）；`sysmon → gitsync`（`isBgPaused()` 导出为函数，不共享裸变量）。两个 Vue 已知雷（档案在案）：reactive 缓存必须先判空取代理再写入；拆分不改变任何 reactive 引用结构。
+（依赖规则不变：state ← 所有；workspace ← procs/gitsync/sysmon；sysmon → gitsync。"6 领域模块"是拆前口径，拆后实际 10 个文件，结构一致。）
+
+**依赖规则**：`state ← 所有`；`workspace ← procs / gitsync / sysmon`（通知）；`sysmon → gitsync`（`isBgPaused()` 导出为函数，不共享裸变量）。两个 Vue 已知雷（档案在案）：reactive 缓存必须先判空取代理再写入；拆分不改变任何 reactive 引用结构。拆分后新增 `store/backup.js`、`store/algo.js`、`store/doctor.js`，repo 里代码以 store.js 目录为准。
 
 ### 3.3 执行顺序与安全网
 

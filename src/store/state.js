@@ -46,6 +46,7 @@ export const store = reactive({
   notifications: [],       // 通知中心：{id, icon, text, time, read, projectId?}
   aiAdvice: { date: '', at: 0, summary: '', items: [] },  // AI 今日建议（按天持久化）
   explore: {},             // 探索模式：projectId -> {date, at, score, grade, summary, dims, ideas, ruleScore...}
+  doctor: {},              // 项目体检：projectId -> {date, at, score, grade, summary, dims, items, ruleScore...}
   algo: { progress: {}, log: {}, redo: [], goal: 2 }, // 刷题领航：progress slug->{done,doneAt,note} / log 日期->完成数 / redo 重做队列 / goal 每日题量
 });
 
@@ -64,6 +65,8 @@ export function load() {
     if (a && a.date === today()) store.aiAdvice = a;
     const ex = window.pilot?.dbGet('pilot:explore');
     if (ex) store.explore = ex; // 按项目缓存，UI 侧按日期判断是否过期
+    const dr = window.pilot?.dbGet('pilot:doctor');
+    if (dr) store.doctor = dr; // 同上
     const ag = window.pilot?.dbGet('pilot:algo');
     if (ag) store.algo = Object.assign({ progress: {}, log: {}, redo: [], goal: 2 }, ag);
   } catch (e) { console.error(e); }

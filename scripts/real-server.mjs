@@ -24,6 +24,7 @@ const isWin = process.platform === 'win32';
 const requireCjs = createRequire(import.meta.url);
 const { gitApi } = requireCjs(path.join(ROOT, 'preload', 'git.cjs'));
 const { sysApi } = requireCjs(path.join(ROOT, 'preload', 'sys.cjs'));
+const { inspectApi } = requireCjs(path.join(ROOT, 'preload', 'inspect.cjs'));
 const { shellArgs } = requireCjs(path.join(ROOT, 'preload', 'env.cjs'));
 
 // 单次请求异常不拖垮整个服务
@@ -757,6 +758,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 200, await fn(body.args));
       }
       if (p === '/api/ident' && req.method === 'POST') return sendJson(res, 200, await identify(body.args[0]));
+      if (p === '/api/inspect' && req.method === 'POST') return sendJson(res, 200, await inspectApi.inspect(body.root));
       return sendJson(res, 404, { message: `未实现的接口: ${key}` });
     }
     // ----- 桥接脚本 -----

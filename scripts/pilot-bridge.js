@@ -160,6 +160,10 @@
 
     // ---------- 项目身份识别 ----------
     identify: (p) => post('/api/ident', { args: [p] }),
+    // ---------- 项目体检采集 ----------
+    inspect: {
+      inspect: (root) => post('/api/inspect', { root }),
+    },
 
     // ---------- 系统监测 ----------
     sys: {
