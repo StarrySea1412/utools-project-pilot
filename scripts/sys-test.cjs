@@ -1,6 +1,23 @@
-global.window = {};
-require('./_preload-copy.cjs');
-const p = window.pilot;
+// sys-test.cjs — preload 系统监测域真机烟测（node scripts/sys-test.cjs）
+// 注意：package.json type:module 下普通 Node require 不了 preload.js（CJS 源码），
+// 它只能被 uTools / Electron 的 preload 加载器或 VM 沙箱执行——这里用后者。
+const fs = require('fs');
+const path = require('path');
+const vm = require('vm');
+const { createRequire } = require('module');
+
+const require_ = createRequire(__dirname);
+const code = fs.readFileSync(path.join(__dirname, '../preload.js'), 'utf8');
+const sandbox = {
+  window: {},
+  require: (id) => require_(id.startsWith('.') ? path.resolve(__dirname, '..', id) : id),
+  process, console, setTimeout, clearTimeout, setInterval, clearInterval,
+};
+sandbox.globalThis = sandbox;
+vm.createContext(sandbox);
+vm.runInContext(code, sandbox);
+
+const p = sandbox.window.pilot;
 (async () => {
   const mem = p.sys.memory();
   p.sys.cpu();

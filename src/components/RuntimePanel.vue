@@ -9,7 +9,9 @@ import Icon from './Icon.vue';
 
 const emit = defineEmits(['open-detail']);
 const expanded = ref({}); // 服务行日志展开
-const collapsed = ref(false); // 面板折叠状态
+// 面板默认折叠：项目卡片已有服务徽标，运行时面板的独特价值是管理操作（日志/重启/结束），
+// 日常只需一行速览——折叠态头部内嵌服务 chips（可点击直达），展开才见完整管理行。
+const collapsed = ref(true);
 
 // 汇总：每个项目 × projectServices（内部 + 外部）
 const allServices = computed(() => {
@@ -79,15 +81,29 @@ function openUrl(s) { if (s.url) window.pilot.openInBrowser(s.url); }
 function toProject(id) { emit('open-detail', id); }
 // HTTP 服务的探活结果（store 每 15s 刷新；无数据不显示）
 const healthOf = (s) => (s.port && isHttpPort(s.port) ? (store.sys?.health?.[s.port] || null) : null);
+// 聚合健康灯：有探活数据且任一失败 → 红；否则绿
+const aggHealth = computed(() => {
+  const hs = allServices.value.map(healthOf).filter(Boolean);
+  return hs.length && hs.some((h) => !h.ok) ? 'down' : 'on';
+});
 </script>
 
 <template>
   <section v-if="isRunning" class="glass panel rt-panel" :class="{ collapsed }">
     <div class="rt-head" @click="collapsed = !collapsed">
+      <span class="rt-led" :class="aggHealth"></span>
       <h4 class="panel-title"><Icon name="Activity" :size="14" /> 运行时 · {{ allServices.length }} 个服务</h4>
       <span class="mini-tag svc mono" title="全部服务进程内存合计">服务 {{ fmtMem(totalMem) }}</span>
-      <span v-if="selfRss" class="mini-tag mono" title="本插件进程内存占用">自身 {{ selfRss }} MB</span>
+      <span v-if="!collapsed && selfRss" class="mini-tag mono" title="本插件进程内存占用">自身 {{ selfRss }} MB</span>
       <span class="spacer"></span>
+      <!-- 折叠态：服务速览 chips（探活着色，点击直达浏览器） -->
+      <template v-if="collapsed">
+        <span v-for="s in allServices.slice(0, 3)" :key="'c' + s.project.id + ':' + (s.port || s.name)"
+              class="mini-tag svc rt-chip" :class="{ down: healthOf(s) && !healthOf(s).ok }"
+              :title="(s.url ? '点击打开 ' + s.url : (s.service || s.name) + ' 运行中') + '；点面板展开管理'"
+              @click.stop="openUrl(s)">{{ s.service || s.name }}<template v-if="s.port"><span class="svc-port">:{{ s.port }}</span></template></span>
+        <span v-if="allServices.length > 3" class="mini-tag svc-more" :title="allServices.slice(3).map((x) => x.service || x.name).join(', ')">+{{ allServices.length - 3 }}</span>
+      </template>
       <span class="rt-collapse-hint">{{ collapsed ? '展开' : '' }}</span>
       <button class="icon-btn sm" :title="collapsed ? '展开面板' : '折叠面板'" @click.stop="collapsed = !collapsed">
         <Icon :name="collapsed ? 'ChevronDown' : 'ChevronUp'" :size="12" />
@@ -120,6 +136,9 @@ const healthOf = (s) => (s.port && isHttpPort(s.port) ? (store.sys?.health?.[s.p
 </template>
 
 <style scoped>
+.rt-led.down { background: var(--err); box-shadow: 0 0 0 3px color-mix(in srgb, var(--err) 22%, transparent); animation: none; }
+.rt-chip { cursor: pointer; max-width: 200px; overflow: hidden; }
+.rt-chip.down { background: color-mix(in srgb, var(--err) 15%, transparent); color: var(--err); }
 .rt-kill { color: var(--err); }
 .rt-kill:hover { background: color-mix(in srgb, var(--err) 15%, transparent); border-radius: 7px; }
 .rt-kill.armed { background: var(--err); color: #fff; border-radius: 7px; padding: 0 8px; font-size: 11px; font-weight: 700; }

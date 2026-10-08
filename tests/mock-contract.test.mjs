@@ -44,7 +44,8 @@ function loadRealPilot() {
   const code = fs.readFileSync(path.join(root, 'preload.js'), 'utf8');
   const sandbox = {
     window: {},
-    require: (id) => require_(id),
+    // preload 拆分后入口会 require('./preload/*.cjs')，相对 id 要按项目根解析
+    require: (id) => require_(id.startsWith('.') ? path.resolve(root, id) : id),
     process, console, setTimeout, clearTimeout, setInterval, clearInterval,
   };
   sandbox.globalThis = sandbox;

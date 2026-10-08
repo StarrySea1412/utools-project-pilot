@@ -6,8 +6,9 @@ import fs from 'fs';
 import fsp from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { execFile, spawn } from 'child_process';
+import { execFile, execFileSync, spawn } from 'child_process';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'node:module';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -18,6 +19,12 @@ const PORT = Number(process.env.PORT || 30082);
 const HOST = '127.0.0.1';
 const MAX_BUF = 256 * 1024;
 const isWin = process.platform === 'win32';
+
+// v1.16 方向打样：新增能力不再复制实现，直接复用 preload/*.cjs（与 uTools / 桌面版同一份代码）
+const requireCjs = createRequire(import.meta.url);
+const { gitApi } = requireCjs(path.join(ROOT, 'preload', 'git.cjs'));
+const { sysApi } = requireCjs(path.join(ROOT, 'preload', 'sys.cjs'));
+const { shellArgs } = requireCjs(path.join(ROOT, 'preload', 'env.cjs'));
 
 // 单次请求异常不拖垮整个服务
 process.on('uncaughtException', (e) => console.error('[uncaughtException]', (e && e.stack) || e));
@@ -139,11 +146,9 @@ async function gitCheckout(cwd, ref) {
 }
 
 // ---------- 进程/脚本 ----------
+// shellArgs 由 preload/env.cjs 提供（顶部统一引入，避免双实现漂移）
 const procs = new Map();
 let procSeq = 0;
-function shellArgs(cmd) {
-  return isWin ? { file: 'cmd.exe', args: ['/d', '/s', '/c', cmd] } : { file: '/bin/bash', args: ['-lc', cmd] };
-}
 function startScript(cwd, script) {
   const id = `p${++procSeq}_${Date.now()}`;
   const { file, args } = shellArgs(script.cmd);
@@ -654,6 +659,17 @@ const gitOps = {
       return { ins: parts[0], path: parts[parts.length - 1] };
     });
   },
+  // —— 以下经 preload/git.cjs 复用（v1.12~v1.14 新增的 Git 深水区能力，曾只在 uTools 桥实现） ——
+  tags: (b) => gitApi.tags(b.cwd),
+  fileLog: (b) => gitApi.fileLog(b.cwd, b.file, b.n),
+  blameRaw: (b) => gitApi.blameRaw(b.cwd, b.file),
+  applyStaged: (b) => gitApi.applyStaged(b.cwd, b.patch),
+  createBranch: (b) => gitApi.createBranch(b.cwd, b.name, b.from),
+  deleteBranch: (b) => gitApi.deleteBranch(b.cwd, b.name, b.force),
+  stashPush: (b) => gitApi.stashPush(b.cwd, b.msg),
+  stashPop: (b) => gitApi.stashPop(b.cwd, b.label),
+  stashDrop: (b) => gitApi.stashDrop(b.cwd, b.label),
+  stashList: (b) => gitApi.stashList(b.cwd),
 };
 
 const fsOps = {
@@ -678,6 +694,18 @@ function shellAction(op, arg) {
     else if (op === 'showItemInFolder') quiet('explorer.exe', ['/select,', arg]);
     else if (op === 'openInBrowser') isWin ? quiet('cmd.exe', ['/d', '/c', 'start', '', arg]) : quiet('xdg-open', [arg]);
     else if (op === 'openTerminal') isWin ? quiet('cmd.exe', ['/d', '/c', 'wt.exe', '-d', arg]) : null;
+    else if (op === 'openWithEditor') { const sa = shellArgs(arg); const p = spawn(sa.file, sa.args, { windowsHide: true, detached: true, stdio: 'ignore' }); p.unref(); }
+    else if (op === 'hasInPath') {
+      // PATH 探测（与 preload/utools.cjs 同规则）：Windows 下连 .cmd/.exe 扩展一起试
+      const { cmd, isWinTarget } = arg || {};
+      for (const name of (isWinTarget ? [cmd, `${cmd}.cmd`, `${cmd}.exe`] : [cmd])) {
+        try {
+          const r = execFileSync(isWinTarget ? 'where.exe' : 'which', [name], { timeout: 3000, windowsHide: true, stdio: 'pipe' });
+          if (String(r || '').trim()) return true;
+        } catch (e) {}
+      }
+      return false;
+    }
     else if (op === 'copyText') { const c = spawn('clip', { windowsHide: true }); c.stdin.end(String(arg)); }
     else if (op === 'notify') console.log(`[通知] ${arg}`);
     else if (op === 'killPid') return new Promise((resolve) => {
@@ -714,6 +742,7 @@ const server = http.createServer(async (req, res) => {
         if (req.method === 'POST') return sendJson(res, 200, await stopProc(m[1]));
       }
       if (p === '/api/sys/ports' && req.method === 'POST') return sendJson(res, 200, await sysPorts());
+      if (p === '/api/sys/probe' && req.method === 'POST') return sendJson(res, 200, await sysApi.probe(body.ports, body.timeoutMs));
       if (p === '/api/run-once') return sendJson(res, 200, await runOnce(body.cwd, body.cmd, body.timeoutMs));
       if (p === '/api/ai') return sendJson(res, 200, await aiChat(body));
       if (p === '/api/shell') return sendJson(res, 200, await shellAction(body.op, body.arg));

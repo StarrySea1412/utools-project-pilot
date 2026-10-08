@@ -1,4 +1,4 @@
-# Seewrok Seewrok
+# Seewrok
 
 一个面向开发者的**轻量级项目管理智能领航台**（uTools 插件形态）：一键启动脚本与服务、Git 变更与提交历史、项目备忘、自动任务、**系统内存 / CPU / 端口监听**、**领航建议（任务推荐）**，并集成 **AI 生成提交信息** 与 **提交记录分析**（模式与提示词均可自定义）。前端 Vue 3 + Vite，iOS 磨砂玻璃质感，浅色/深色主题。
 
@@ -39,9 +39,10 @@
 - **Ctrl+K 命令面板**：模糊搜索项目 / 脚本 / 导航 / 设置，全键盘操作（↑↓ 选择、Enter 执行）
 - `J` / `K` 列表导航项目，`Enter` 打开，`Esc` 逐级返回；设置页有快捷键说明卡
 
-### 🧭 工作台（建议 + 待办）
+### 🧭 工作台（建议 + 待办 + 刷题）
 - **领航建议**与**全局待办**合并在一个子页签面板，紧急建议会自动展开提醒
 - 待办支持列表 / 四象限（紧急·重要）两种视图，可关联项目
+- **🎯 刷题领航**：内置 LeetCode 热题题库（100 题 / 14 分类），每日推荐（同日稳定、重做队列优先、分类轮转保证覆盖面）、连续打卡、分类进度、题目笔记、一键跳转题页
 
 ### 🔧 脚本 & 服务
 - 常用命令保存为一键脚本；服务型脚本（dev server 等）常驻运行、可启停
@@ -82,6 +83,7 @@
 - **Vitest 单测**（`npm test`）：建议规则引擎 / 状态与持久化 / 服务识别与项目归属 / mock 契约防漂移 / 备份导入导出
 - GitHub Actions CI：push/PR 自动跑测试 + 构建 + 产物检查
 - `?flat` 低性能降级（去重度模糊）；`mock/utools-mock.js` 让整套 UI 在浏览器独立运行（uTools 内自动失效）
+- 📐 **架构与迭代文档**：[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)（三端桥架构 + 模块依赖规则）· [docs/ROADMAP.md](docs/ROADMAP.md)（迭代计划）
 
 ## 📦 安装 & 开发
 
@@ -117,14 +119,25 @@ npm run desktop:build    # 打包：vite build + electron-builder → release/Se
 ```
 utools-project-pilot/
 ├── plugin.json            # uTools 插件清单（main → dist/index.html）
-├── preload.js             # Node 引擎：Git / 进程 / 文件 / DB / AI / 系统监测
+├── preload.js             # Node 桥入口：聚合 preload/ 域模块 + 挂载 window.pilot
+├── preload/               # Node 桥域模块（全 .cjs，依赖单向，见 docs/ARCHITECTURE.md）
+│   ├── env.cjs             # 底座：平台判断 / runCmd / shellArgs / 输出截断
+│   ├── git.cjs             # Git 域：status/diff/log/branch/tag/stash/blame/hunk 暂存
+│   ├── proc.cjs            # 进程域：脚本常驻 / 一次性命令 / 进程树终止
+│   ├── fs.cjs              # 文件域：目录浏览 / 文本预览 / 基础文件操作
+│   ├── ai.cjs              # AI 域：OpenAI 兼容 chat 调用
+│   ├── sys.cjs             # 系统监测域：内存/CPU/端口/进程信息/HTTP 探活
+│   ├── identify.cjs        # 项目身份识别：logo + 技术栈
+│   └── utools.cjs          # uTools API 封装：db 兼容/对话框/shell/通知
 ├── index.html             # Vite 入口
 ├── desktop/               # 独立桌面版（Electron 壳）
 │   ├── main.cjs            # 主进程：窗口/托盘/热键/单实例/同步 IPC（db·对话框·通知）
 │   └── preload.cjs         # window.utools shim + 挂载根 preload.js → window.pilot
 ├── src/
 │   ├── main.js            # 挂载 + 全局错误钩子
-│   ├── store.js           # reactive 状态：项目/设置/Git 缓存/进程/自动任务/系统轮询
+│   ├── store.js           # 门面：re-export src/store/ 各领域模块（导出面不变）
+│   ├── store/             # 领域状态模块：state / projects / workspace / ai /
+│   │                      # procs / gitsync / sysmon / backup
 │   ├── ui.js              # toast / modal / confirm / 工具
 │   ├── advisor.js         # 领航建议：规则引擎 + AI 增强
 │   ├── assets/app.css     # iOS 磨砂玻璃样式（双主题）
@@ -132,6 +145,7 @@ utools-project-pilot/
 │   │                      # Detail / Tab×6 / GitChanges / GitHistory / GitInsights /
 │   │                      # ConsoleDrawer / ToastHost / ModalHost
 │   └── modals/            # 添加项目 / 编辑项目 / 脚本 / 任务 / 任务日志 / 分析模式 / 设置 / 端口
+├── docs/                  # ARCHITECTURE.md 架构一页纸 · ROADMAP.md 迭代计划
 ├── public/mock/           # 浏览器预览 mock（uTools 内自动失效）
 ├── assets/tech-stack.png  # 技术栈全景图
 └── scripts/gen-logo.js    # logo 生成脚本

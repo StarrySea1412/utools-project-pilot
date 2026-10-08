@@ -45,6 +45,35 @@
       const t = p && p.trim();
       return t ? [t.replace(/\\/g, '/').replace(/\/+$/, '')] : [];
     },
+    // 数据导出：浏览器下载（预览环境没有原生保存框），返回文件名供 toast 展示
+    exportJson(name, text) {
+      try {
+        const blob = new Blob([text], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+        return name;
+      } catch (e) { return null; }
+    },
+    // 数据导入：浏览器文件选择，取消返回 null（与 preload 契约一致）
+    importJson() {
+      return new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json,application/json';
+        input.onchange = () => {
+          const f = input.files && input.files[0];
+          if (!f) return resolve(null);
+          const r = new FileReader();
+          r.onload = () => resolve(String(r.result || ''));
+          r.onerror = () => resolve(null);
+          r.readAsText(f);
+        };
+        input.click();
+      });
+    },
     openPath(p) { shell('openPath', p); return null; },
     showItemInFolder(p) { shell('showItemInFolder', p); },
     openInBrowser(url) { shell('openInBrowser', url); },
@@ -52,6 +81,8 @@
     notify(body) { shell('notify', body); },
     isDark() { return window.matchMedia('(prefers-color-scheme: dark)').matches; },
     openTerminal(cwd) { shell('openTerminal', cwd); },
+    openWithEditor: (cmd) => { shell('openWithEditor', cmd); return true; },
+    hasInPath: (cmd, isWinTarget) => post('/api/shell', { op: 'hasInPath', arg: { cmd, isWinTarget } }),
     killPid: (pid) => post('/api/shell', { op: 'killPid', arg: pid }),
 
     // ---------- git ----------
@@ -72,6 +103,17 @@
       commitBranches: (cwd, limit) => post('/api/git/commitBranches', { cwd, limit }),
       checkout: (cwd, ref) => post('/api/git/checkout', { cwd, ref }),
       commitFileNames: (cwd, hash) => post('/api/git/commitFileNames', { cwd, hash }),
+      // —— v1.12~v1.14 Git 深水区（曾漂移缺失，导致预览下不可用） ——
+      tags: (cwd) => post('/api/git/tags', { cwd }),
+      fileLog: (cwd, file, n) => post('/api/git/fileLog', { cwd, file, n }),
+      blameRaw: (cwd, file) => post('/api/git/blameRaw', { cwd, file }),
+      applyStaged: (cwd, patch) => post('/api/git/applyStaged', { cwd, patch }),
+      createBranch: (cwd, name, from) => post('/api/git/createBranch', { cwd, name, from }),
+      deleteBranch: (cwd, name, force) => post('/api/git/deleteBranch', { cwd, name, force }),
+      stashPush: (cwd, msg) => post('/api/git/stashPush', { cwd, msg }),
+      stashPop: (cwd, label) => post('/api/git/stashPop', { cwd, label }),
+      stashDrop: (cwd, label) => post('/api/git/stashDrop', { cwd, label }),
+      stashList: (cwd) => post('/api/git/stashList', { cwd }),
     },
 
     // ---------- 进程/脚本 ----------
@@ -125,6 +167,7 @@
       cpu() { return fast.cpu; },
       self() { return fast.self || null; },
       ports: () => post('/api/sys/ports'),
+      probe: (ports, timeoutMs) => post('/api/sys/probe', { ports, timeoutMs }),
     },
 
     defaultCommitPrompt: '你是资深工程师。根据我提供的 git 暂存区变更，生成一条简洁规范的中文 commit message，遵循 Conventional Commits（如 feat/fix/docs/refactor/perf/chore/test(scope): 描述）。只输出消息本身，不要任何解释、代码块或引号，50 字以内。',
